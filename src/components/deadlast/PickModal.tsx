@@ -34,10 +34,38 @@ function placementLabel(placement: Placement | undefined) {
   return "Placement locked"
 }
 
-function stageLabel(stage: Stage) {
+function ordinal(place: Placement) {
+  if (place === 1) return "1st"
+  if (place === 2) return "2nd"
+  if (place === 3) return "3rd"
+  return "4th"
+}
+
+function stageLabel(
+  stage: Stage,
+  activePlayers: Player[],
+  placements: Partial<Record<string, Placement>>,
+) {
+  const activeCount = activePlayers.length
+  const lockedPlacements = Object.values(placements).filter(Boolean) as Placement[]
+  const totalPlayers = Math.max(activeCount + lockedPlacements.length, 2)
+
+  const openPlacements = Array.from(
+    { length: totalPlayers },
+    (_, index) => (index + 1) as Placement,
+  ).filter((placement) => !lockedPlacements.includes(placement))
+
   if (stage === "main") return "Main round"
-  if (stage === "winners") return "Playing for 1st / 2nd"
-  return "Playing for 2nd / 3rd"
+
+  if (activeCount === 3) {
+    return `Playing for ${openPlacements.map(ordinal).join(" / ")}`
+  }
+
+  if (activeCount === 2) {
+    return `Head-to-head for ${openPlacements.map(ordinal).join(" / ")}`
+  }
+
+  return `Playing for ${openPlacements.map(ordinal).join(" / ")}`
 }
 
 export default function PickModal({
@@ -69,7 +97,7 @@ export default function PickModal({
       <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-neutral-900 p-6 text-white shadow-[0_0_60px_rgba(0,0,0,0.6)]">
         <div className="text-center">
           <div className="text-xs uppercase tracking-[0.3em] text-white/45">
-            {stageLabel(stage)}
+            {stageLabel(stage, activePlayers, placements)}
           </div>
 
           <div className="mt-2 text-4xl font-black text-red-300">{timer}</div>

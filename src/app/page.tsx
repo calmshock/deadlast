@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import Header from "@/components/deadlast/Header"
-import HeroPanel from "@/components/deadlast/HeroPanel"
-import PlayersSection from "@/components/deadlast/PlayersSection"
-import RoundStatusPanel from "@/components/deadlast/RoundStatusPanel"
-import ResultsPanel from "@/components/deadlast/ResultsPanel"
-import RoundLogPanel from "@/components/deadlast/RoundLogPanel"
-import DailyDrawPanel from "@/components/deadlast/DailyDrawPanel"
-import ResultModal from "@/components/deadlast/ResultModal"
-import PickModal from "@/components/deadlast/PickModal"
-import EntryToast from "@/components/deadlast/EntryToast"
-import { useDeadlastGame } from "@/hooks/useDeadlastGame"
-import type { Move } from "@/types/game"
+import Header from "@/components/deadlast/Header";
+import HeroPanel from "@/components/deadlast/HeroPanel";
+import PlayersSection from "@/components/deadlast/PlayersSection";
+import RoundStatusPanel from "@/components/deadlast/RoundStatusPanel";
+import ResultsPanel from "@/components/deadlast/ResultsPanel";
+import RoundLogPanel from "@/components/deadlast/RoundLogPanel";
+import DailyDrawPanel from "@/components/deadlast/DailyDrawPanel";
+import ResultModal from "@/components/deadlast/ResultModal";
+import PickModal from "@/components/deadlast/PickModal";
+import EntryToast from "@/components/deadlast/EntryToast";
+import { useDeadlastGame } from "@/hooks/useDeadlastGame";
+import type { Move } from "@/types/game";
 
 export default function HomePage() {
-  const game = useDeadlastGame()
+  const game = useDeadlastGame();
 
   function handlePick(pick: Move) {
-    game.chooseMove(pick)
+    game.chooseMove(pick);
   }
 
-  const showPickModal = game.showPickModal && !game.showResultModal
+  const showPickModal = game.showPickModal && !game.showResultModal;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-black text-white">
@@ -37,10 +37,12 @@ export default function HomePage() {
               buyIn={game.buyIn}
               houseCut={game.houseCut}
               phase={game.phase}
+              playerCount={game.playerCount}
+              setPlayerCount={game.setPlayerCount}
               autoPlayEnabled={game.autoPlayEnabled}
               autoPlayDelay={game.autoPlayDelay}
               setBuyIn={game.setBuyIn}
-              startMatch={() => game.startMatch()}
+              startMatch={game.startMatch}
               setAutoPlayEnabled={game.setAutoPlayEnabled}
               setAutoPlayDelay={game.setAutoPlayDelay}
             />
@@ -129,5 +131,5 @@ export default function HomePage() {
 
       {game.entryToast && <EntryToast amount={game.entryToast.amount} />}
     </main>
-  )
+  );
 }

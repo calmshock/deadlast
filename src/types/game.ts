@@ -1,10 +1,15 @@
 // src/types/game.ts
 
 export type Move = "rock" | "paper" | "scissors";
+export type GameMode = 2 | 3 | 4;
 export type Phase = "lobby" | "countdown" | "locked" | "revealing" | "results";
 export type Stage = "main" | "winners" | "losers";
-export type Placement = 1 | 2 | 3;
-export type FinishContext = "main_round_win" | "final_first" | "final_second" | "final_third";
+export type Placement = 1 | 2 | 3 | 4;
+export type FinishContext =
+  | "main_round_win"
+  | "final_first"
+  | "final_second"
+  | "final_third";
 
 export type Player = {
   id: string;

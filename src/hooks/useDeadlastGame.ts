@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   FinishContext,
+  GameMode,
   Move,
   MoveStats,
   Phase,
@@ -12,12 +13,10 @@ import type {
   RoundLogEntry,
   Stage,
 } from "@/types/game";
-import {
-  readArenaProgress,
-  writeArenaProgress,
-} from "@/lib/arena/progress";
 
-const ROUND_SECONDS = 3;
+import { BOT_NAMES, ROUND_SECONDS } from "@/types/game";
+import { readArenaProgress, writeArenaProgress } from "@/lib/arena/progress";
+import { payoutForPlacement } from "@/lib/payouts";
 
 type EntryToast = {
   id: number;
@@ -34,36 +33,6 @@ type SponsorStats = {
   lastClickAt: number | null;
 };
 
-function makeInitialPlayers(): Player[] {
-  return [
-    {
-      id: "you",
-      name: "You",
-      isUser: true,
-      move: null,
-      locked: false,
-    },
-    {
-      id: "riot",
-      name: "Riot",
-      isUser: false,
-      move: null,
-      locked: false,
-    },
-    {
-      id: "shade",
-      name: "Shade",
-      isUser: false,
-      move: null,
-      locked: false,
-    },
-  ];
-}
-
-function makeLogId() {
-  return `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function randomMove(): Move {
   const moves: Move[] = ["rock", "paper", "scissors"];
   return moves[Math.floor(Math.random() * moves.length)];
@@ -77,61 +46,122 @@ function beats(a: Move, b: Move) {
   );
 }
 
-function placementDelta(placement: Placement, buyIn: number) {
-  if (placement === 1) return +(buyIn * 0.6).toFixed(2);
-  if (placement === 2) return +(buyIn * 0.3).toFixed(2);
-  return -buyIn;
+function makeLogId() {
+  return `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function buildResults(players: Player[], placements: Partial<Record<string, Placement>>, buyIn: number) {
-  return players
-    .filter((player) => placements[player.id])
-    .map((player) => {
-      const placement = placements[player.id] as Placement;
+function createPlayers(playerCount: GameMode): Player[] {
+  const base: Player[] = [
+    {
+      id: "you",
+      name: "You",
+      isUser: true,
+      move: null,
+      locked: false,
+    },
+  ];
 
-      return {
-        name: player.name,
-        placement,
-        delta: placementDelta(placement, buyIn),
-      };
-    })
-    .sort((a, b) => a.placement - b.placement);
+  for (let i = 0; i < playerCount - 1; i++) {
+    base.push({
+      id: `bot-${i}`,
+      name: BOT_NAMES[i],
+      isUser: false,
+      move: null,
+      locked: false,
+    });
+  }
+
+  return base;
+}
+
+function getWinnerAndLoserMoves(moves: Move[]) {
+  const uniqueMoves = [...new Set(moves)];
+
+  if (uniqueMoves.length !== 2) return null;
+
+  const first = uniqueMoves[0];
+  const second = uniqueMoves[1];
+
+  const winnerMove = beats(first, second) ? first : second;
+  const loserMove = winnerMove === first ? second : first;
+
+  return {
+    winnerMove,
+    loserMove,
+  };
+}
+
+function ordinal(place: Placement) {
+  if (place === 1) return "1st";
+  if (place === 2) return "2nd";
+  if (place === 3) return "3rd";
+  return "4th";
+}
+
+function resolveHiddenHeadToHead(
+  players: Player[],
+  ids: string[],
+  places: Placement[],
+): Partial<Record<string, Placement>> {
+  const hiddenPlayers = players.filter((player) => ids.includes(player.id));
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const picked = hiddenPlayers.map((player) => ({
+      ...player,
+      move: randomMove(),
+      locked: true,
+    }));
+
+    const outcome = getWinnerAndLoserMoves(
+      picked.map((player) => player.move as Move),
+    );
+
+    if (!outcome) continue;
+
+    const winner = picked.find((player) => player.move === outcome.winnerMove);
+    const loser = picked.find((player) => player.move === outcome.loserMove);
+
+    if (!winner || !loser) continue;
+
+    return {
+      [winner.id]: places[0],
+      [loser.id]: places[1],
+    };
+  }
+
+  return {
+    [hiddenPlayers[0].id]: places[0],
+    [hiddenPlayers[1].id]: places[1],
+  };
 }
 
 export function useDeadlastGame() {
   const [mounted, setMounted] = useState(false);
+  const [playerCount, setPlayerCount] = useState<GameMode>(3);
   const [buyIn, setBuyIn] = useState(1);
   const [balance, setBalance] = useState(100);
-
   const [phase, setPhase] = useState<Phase>("lobby");
   const [stage, setStage] = useState<Stage>("main");
   const [timer, setTimer] = useState(ROUND_SECONDS);
-
-  const [players, setPlayers] = useState<Player[]>(makeInitialPlayers());
-  const [activeIds, setActiveIds] = useState<string[]>(["you", "riot", "shade"]);
+  const [players, setPlayers] = useState<Player[]>(createPlayers(3));
+  const [activeIds, setActiveIds] = useState<string[]>([]);
   const [placements, setPlacements] = useState<Partial<Record<string, Placement>>>({});
   const [results, setResults] = useState<ResultRow[]>([]);
   const [roundLog, setRoundLog] = useState<RoundLogEntry[]>([]);
-
   const [message, setMessage] = useState("Only one player loses.");
   const [roundTitle, setRoundTitle] = useState("Main round");
   const [roundSubtext, setRoundSubtext] = useState("Choose your move.");
-
   const [showResultModal, setShowResultModal] = useState(false);
   const [modalSummary, setModalSummary] = useState<ResultRow[]>([]);
   const [finishContext, setFinishContext] = useState<FinishContext>("final_third");
-
-  const [moveStats, setMoveStats] = useState<Record<string, MoveStats>>({});
+  const [moveStats] = useState<Record<string, MoveStats>>({});
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [autoPlayDelay, setAutoPlayDelay] = useState(1500);
-
   const [entriesAwardEligible, setEntriesAwardEligible] = useState(false);
   const [entriesEarnedThisMatch, setEntriesEarnedThisMatch] = useState(0);
   const [entryToast, setEntryToast] = useState<EntryToast | null>(null);
-
   const [entries, setEntries] = useState(0);
   const [lifetimeEntries, setLifetimeEntries] = useState(0);
-
   const [dailyDrawPrize] = useState("$50 Cash");
   const [sponsorSlot] = useState({
     name: "Sponsor Slot",
@@ -153,7 +183,6 @@ export function useDeadlastGame() {
     sessionImpressions: 0,
     lastClickAt: null,
   });
-
   const [arenaProfile] = useState({
     auto: false,
     wins: 0,
@@ -163,19 +192,26 @@ export function useDeadlastGame() {
     preferredPick: null,
   });
 
+  const currentPlacesRef = useRef<Placement[]>([1, 2, 3]);
+  const hiddenPlacementsRef = useRef<Partial<Record<string, Placement>>>({});
   const userMadeManualPickThisMatchRef = useRef(false);
   const userWasAutoPickedThisMatchRef = useRef(false);
   const awardedEntryRef = useRef(false);
   const resolvingRef = useRef(false);
 
-  const houseCut = useMemo(() => +(buyIn * 0.1).toFixed(2), [buyIn]);
-
-  const user = useMemo(() => players.find((player) => player.isUser) ?? null, [players]);
+  const user = useMemo(
+    () => players.find((player) => player.isUser) ?? null,
+    [players],
+  );
 
   const activePlayers = useMemo(
     () => players.filter((player) => activeIds.includes(player.id)),
     [players, activeIds],
   );
+
+  const houseCut = useMemo(() => {
+    return +(buyIn * 0.1).toFixed(2);
+  }, [buyIn]);
 
   const showPickModal =
     phase === "countdown" || phase === "locked" || phase === "revealing";
@@ -205,7 +241,7 @@ export function useDeadlastGame() {
     ]);
   }
 
-  function resetActivePlayersForRound(ids: string[]) {
+  function resetPlayersForIds(ids: string[]) {
     setPlayers((current) =>
       current.map((player) => {
         if (!ids.includes(player.id)) return player;
@@ -219,212 +255,436 @@ export function useDeadlastGame() {
     );
   }
 
-  function beginRound(ids: string[], nextStage: Stage, note: string) {
+  function beginBracketRound(ids: string[], places: Placement[], note: string) {
     resolvingRef.current = false;
+    currentPlacesRef.current = places;
     setActiveIds(ids);
-    setStage(nextStage);
-    resetActivePlayersForRound(ids);
+    resetPlayersForIds(ids);
     setTimer(ROUND_SECONDS);
     setPhase("countdown");
     setMessage(note);
 
-    if (nextStage === "main") {
+    if (places[0] === 1 && places[places.length - 1] === playerCount) {
+      setStage("main");
       setRoundTitle("Main round");
       setRoundSubtext("Choose your move.");
-    } else if (nextStage === "winners") {
-      setRoundTitle("Winners round");
-      setRoundSubtext("Playing for 1st and 2nd.");
+    } else if (places[0] === 1) {
+      setStage("winners");
+      setRoundTitle(places.length === 3 ? "Top bracket continues" : "Top bracket");
+      setRoundSubtext(
+        places.length === 3
+          ? `Three players are still live for ${places.map(ordinal).join(" / ")}.`
+          : `Head-to-head for ${places.map(ordinal).join(" / ")}.`
+      );
     } else {
-      setRoundTitle("Losers round");
-      setRoundSubtext("Playing for 2nd and 3rd.");
+      setStage("losers");
+      setRoundTitle(places.length === 3 ? "Danger bracket continues" : "Danger bracket");
+      setRoundSubtext(
+        places.length === 3
+          ? `Three players are still live for ${places.map(ordinal).join(" / ")}.`
+          : `Head-to-head for ${places.map(ordinal).join(" / ")}.`
+      );
     }
-  }
-
-  function awardEntryIfNeeded(finalResults: ResultRow[]) {
-    const yourResult = finalResults.find((result) => result.name === "You");
-    const eligible =
-      userMadeManualPickThisMatchRef.current &&
-      !userWasAutoPickedThisMatchRef.current;
-
-    setEntriesAwardEligible(eligible);
-
-    if (!yourResult) {
-      setEntriesEarnedThisMatch(0);
-      syncEntriesFromProgress();
-      return;
-    }
-
-    const earned = eligible && yourResult.placement === 3 ? 1 : 0;
-
-    setEntriesEarnedThisMatch(earned);
-
-    if (earned <= 0 || awardedEntryRef.current) {
-      syncEntriesFromProgress();
-      return;
-    }
-
-    const progress = readArenaProgress();
-
-    const nextProgress = {
-      ...progress,
-      sessionLossEntries: progress.sessionLossEntries + 1,
-      lifetimeLossEntries: progress.lifetimeLossEntries + 1,
-      sessionEligibleLosses: progress.sessionEligibleLosses + 1,
-      lifetimeEligibleLosses: progress.lifetimeEligibleLosses + 1,
-      lastUpdatedAt: Date.now(),
-    };
-
-    awardedEntryRef.current = true;
-    writeArenaProgress(nextProgress);
-
-    setEntryToast({
-      id: Date.now(),
-      amount: earned,
-    });
-
-    appendLog({
-      title: "Entry earned",
-      subtitle: "Prize cycle",
-      picks: [],
-      outcome: "You earned 1 entry toward the current draw.",
-    });
-
-    syncEntriesFromProgress();
   }
 
   function finishMatch(finalPlacements: Partial<Record<string, Placement>>) {
-    const finalResults = buildResults(players, finalPlacements, buyIn);
-    const yourResult = finalResults.find((result) => result.name === "You");
+    const finalResults = players
+      .map((player) => {
+        const placement = finalPlacements[player.id] as Placement;
+
+        return {
+          placement,
+          name: player.name,
+          delta: payoutForPlacement(buyIn, placement, playerCount),
+        };
+      })
+      .sort((a, b) => a.placement - b.placement);
 
     setResults(finalResults);
     setModalSummary(finalResults);
 
+    const yourResult = finalResults.find((result) => result.name === "You");
+
     if (yourResult) {
       setBalance((current) => +(current + yourResult.delta).toFixed(2));
 
-      if (yourResult.placement === 1) setFinishContext("final_first");
-      else if (yourResult.placement === 2) setFinishContext("final_second");
-      else setFinishContext("final_third");
-    }
+      const lastPlace = playerCount;
 
-    awardEntryIfNeeded(finalResults);
+      if (yourResult.placement === 1) {
+        setFinishContext("final_first");
+      } else if (yourResult.placement === lastPlace) {
+        setFinishContext("final_third");
+      } else {
+        setFinishContext("final_second");
+      }
+
+      const eligible =
+        userMadeManualPickThisMatchRef.current &&
+        !userWasAutoPickedThisMatchRef.current;
+
+      setEntriesAwardEligible(eligible);
+
+      const earned = eligible && yourResult.placement === playerCount ? 1 : 0;
+
+      setEntriesEarnedThisMatch(earned);
+
+      if (earned > 0 && !awardedEntryRef.current) {
+        const progress = readArenaProgress();
+
+        const nextProgress = {
+          ...progress,
+          sessionLossEntries: progress.sessionLossEntries + 1,
+          lifetimeLossEntries: progress.lifetimeLossEntries + 1,
+          sessionEligibleLosses: progress.sessionEligibleLosses + 1,
+          lifetimeEligibleLosses: progress.lifetimeEligibleLosses + 1,
+          lastUpdatedAt: Date.now(),
+        };
+
+        awardedEntryRef.current = true;
+
+        writeArenaProgress(nextProgress);
+
+        setEntryToast({
+          id: Date.now(),
+          amount: 1,
+        });
+
+        syncEntriesFromProgress();
+      }
+    }
 
     setTimeout(() => {
       setPhase("results");
       setShowResultModal(true);
-    }, 800);
+    }, 1200);
   }
 
-  function resolveCurrentRound() {
-    const currentActivePlayers = players.filter((player) =>
-      activeIds.includes(player.id),
-    );
-
-    const currentPicks = currentActivePlayers.map((player) => ({
-      name: player.name,
-      move: player.move,
-    }));
-
-    const uniqueMoves = [...new Set(currentActivePlayers.map((player) => player.move))];
-
-    if (uniqueMoves.length !== 2) {
-      appendLog({
-        title: stage === "main" ? "3-way tie" : "Tied round",
-        subtitle: "Replay",
-        picks: currentPicks,
-        outcome: "No clear result. Replaying this round.",
-      });
-
-      beginRound(activeIds, stage, "Tie round. Pick again.");
-      return;
-    }
-
-    const firstMove = uniqueMoves[0] as Move;
-    const secondMove = uniqueMoves[1] as Move;
-    const winningMove = beats(firstMove, secondMove) ? firstMove : secondMove;
-    const losingMove = winningMove === firstMove ? secondMove : firstMove;
-
-    const winners = currentActivePlayers.filter((player) => player.move === winningMove);
-    const losers = currentActivePlayers.filter((player) => player.move === losingMove);
-
-    appendLog({
-      title: stage === "main" ? "Main round" : "Tie-break",
-      subtitle: "Resolved",
-      picks: currentPicks,
-      outcome: `${winners.map((p) => p.name).join(", ")} beat ${losers
-        .map((p) => p.name)
-        .join(", ")}.`,
-    });
-
-    if (stage === "main") {
-      if (winners.length === 1) {
-        const nextPlacements = {
-          ...placements,
-          [winners[0].id]: 1 as Placement,
-        };
-
-        setPlacements(nextPlacements);
-        beginRound(
-          losers.map((player) => player.id),
-          "losers",
-          "Winner locked 1st. Remaining players are playing for 2nd and 3rd.",
-        );
-        return;
-      }
-
-      if (losers.length === 1) {
-        const nextPlacements = {
-          ...placements,
-          [losers[0].id]: 3 as Placement,
-        };
-
-        setPlacements(nextPlacements);
-        beginRound(
-          winners.map((player) => player.id),
-          "winners",
-          "Loser locked 3rd. Remaining players are playing for 1st and 2nd.",
-        );
-        return;
-      }
-    }
-
-    if (stage === "winners") {
-      const nextPlacements = {
-        ...placements,
-        [winners[0].id]: 1 as Placement,
-        [losers[0].id]: 2 as Placement,
-      };
-
-      setPlacements(nextPlacements);
-      finishMatch(nextPlacements);
-      return;
-    }
-
-    const nextPlacements = {
-      ...placements,
-      [winners[0].id]: 2 as Placement,
-      [losers[0].id]: 3 as Placement,
-    };
+  function maybeFinishOrContinue(nextPlacements: Partial<Record<string, Placement>>) {
+    const assignedCount = Object.keys(nextPlacements).length;
 
     setPlacements(nextPlacements);
-    finishMatch(nextPlacements);
+
+    if (assignedCount >= playerCount) {
+      finishMatch(nextPlacements);
+    }
+  }
+
+  function resolveHeadToHead(
+    roundPlayers: Player[],
+    places: Placement[],
+    nextPlacements: Partial<Record<string, Placement>>,
+  ) {
+    const outcome = getWinnerAndLoserMoves(roundPlayers.map((player) => player.move as Move));
+
+    if (!outcome) {
+      appendLog({
+        title: roundTitle,
+        subtitle: "Replay",
+        outcome: "Both players matched. Replaying this bracket.",
+        picks: roundPlayers.map((player) => ({
+          name: player.name,
+          move: player.move,
+        })),
+      });
+
+      beginBracketRound(
+        roundPlayers.map((player) => player.id),
+        places,
+        "Tie round. Pick again.",
+      );
+
+      return;
+    }
+
+    const winner = roundPlayers.find((player) => player.move === outcome.winnerMove);
+    const loser = roundPlayers.find((player) => player.move === outcome.loserMove);
+
+    if (!winner || !loser) return;
+
+    const resolvedPlacements = {
+      ...nextPlacements,
+      [winner.id]: places[0],
+      [loser.id]: places[1],
+    };
+
+    appendLog({
+      title: roundTitle,
+      subtitle: "Resolved",
+      outcome: `${winner.name} takes ${ordinal(places[0])}. ${loser.name} takes ${ordinal(
+        places[1],
+      )}.`,
+      picks: roundPlayers.map((player) => ({
+        name: player.name,
+        move: player.move,
+      })),
+    });
+
+    maybeFinishOrContinue(resolvedPlacements);
+  }
+
+  function resolveThreePlayerBracket(
+    roundPlayers: Player[],
+    places: Placement[],
+    nextPlacements: Partial<Record<string, Placement>>,
+  ) {
+    const outcome = getWinnerAndLoserMoves(roundPlayers.map((player) => player.move as Move));
+
+    if (!outcome) {
+      appendLog({
+        title: roundTitle,
+        subtitle: "Replay",
+        outcome: "No clean split formed. Replaying this bracket.",
+        picks: roundPlayers.map((player) => ({
+          name: player.name,
+          move: player.move,
+        })),
+      });
+
+      beginBracketRound(
+        roundPlayers.map((player) => player.id),
+        places,
+        "No clean split. Pick again.",
+      );
+
+      return;
+    }
+
+    const winners = roundPlayers.filter((player) => player.move === outcome.winnerMove);
+    const losers = roundPlayers.filter((player) => player.move === outcome.loserMove);
+
+    appendLog({
+      title: roundTitle,
+      subtitle: "Resolved",
+      outcome: `${winners.map((p) => p.name).join(", ")} defeated ${losers
+        .map((p) => p.name)
+        .join(", ")}.`,
+      picks: roundPlayers.map((player) => ({
+        name: player.name,
+        move: player.move,
+      })),
+    });
+
+    if (winners.length === 1) {
+      const updatedPlacements = {
+        ...nextPlacements,
+        [winners[0].id]: places[0],
+      };
+
+      setPlacements(updatedPlacements);
+
+      beginBracketRound(
+        losers.map((player) => player.id),
+        (playerCount === 4 && places.join(",") === "2,3,4" ? [3, 4] : places.slice(1)),
+        `${winners[0].name} secured ${ordinal(places[0])}. Bracket continues for ${places
+          .slice(1)
+          .map(ordinal)
+          .join(" / ")}.`,
+      );
+
+      return;
+    }
+
+    if (losers.length === 1) {
+      const updatedPlacements = {
+        ...nextPlacements,
+        [losers[0].id]: places[places.length - 1],
+      };
+
+      setPlacements(updatedPlacements);
+
+      beginBracketRound(
+        winners.map((player) => player.id),
+        (playerCount === 4 && places.join(",") === "1,2,3" ? [1, 2] : places.slice(0, -1)),
+        `${losers[0].name} dropped into ${ordinal(
+          places[places.length - 1],
+        )}. Remaining players are battling for ${places
+          .slice(0, -1)
+          .map(ordinal)
+          .join(" / ")}.`,
+      );
+    }
+  }
+
+  function resolveFourPlayerMain(
+    roundPlayers: Player[],
+    nextPlacements: Partial<Record<string, Placement>>,
+  ) {
+    const outcome = getWinnerAndLoserMoves(
+      roundPlayers.map((player) => player.move as Move),
+    );
+
+    if (!outcome) {
+      appendLog({
+        title: "Main round",
+        subtitle: "Replay",
+        outcome: "No valid bracket split formed. All four players replay the round.",
+        picks: roundPlayers.map((player) => ({
+          name: player.name,
+          move: player.move,
+        })),
+      });
+
+      beginBracketRound(
+        players.map((player) => player.id),
+        [1, 2, 3, 4],
+        "No clean split formed. Replaying all four players.",
+      );
+
+      return;
+    }
+
+    const winners = roundPlayers.filter(
+      (player) => player.move === outcome.winnerMove,
+    );
+    const losers = roundPlayers.filter(
+      (player) => player.move === outcome.loserMove,
+    );
+
+    appendLog({
+      title: "Main round",
+      subtitle: "Bracket split",
+      outcome: `${winners.map((p) => p.name).join(", ")} defeated ${losers
+        .map((p) => p.name)
+        .join(", ")}.`,
+      picks: roundPlayers.map((player) => ({
+        name: player.name,
+        move: player.move,
+      })),
+    });
+
+    if (winners.length === 1) {
+      const updatedPlacements = {
+        ...nextPlacements,
+        [winners[0].id]: 1 as Placement,
+      };
+
+      setPlacements(updatedPlacements);
+
+      beginBracketRound(
+        losers.map((player) => player.id),
+        [2, 3, 4],
+        `${winners[0].name} secured 1st place. Remaining players are battling for 2nd / 3rd / 4th.`,
+      );
+
+      return;
+    }
+
+    if (losers.length === 1) {
+      const updatedPlacements = {
+        ...nextPlacements,
+        [losers[0].id]: 4 as Placement,
+      };
+
+      setPlacements(updatedPlacements);
+
+      beginBracketRound(
+        winners.map((player) => player.id),
+        [1, 2, 3],
+        `${losers[0].name} was eliminated into 4th place. Remaining players are battling for 1st / 2nd / 3rd.`,
+      );
+
+      return;
+    }
+
+    const userInWinners = winners.some((player) => player.isUser);
+    const visibleBracket = userInWinners ? winners : losers;
+    const hiddenBracket = userInWinners ? losers : winners;
+    const visiblePlaces: Placement[] = userInWinners ? [1, 2] : [3, 4];
+    const hiddenPlaces: Placement[] = userInWinners ? [3, 4] : [1, 2];
+
+    const hiddenResolved = resolveHiddenHeadToHead(
+      roundPlayers,
+      hiddenBracket.map((player) => player.id),
+      hiddenPlaces,
+    );
+
+    hiddenPlacementsRef.current = hiddenResolved;
+
+    setPlacements({
+      ...nextPlacements,
+      ...hiddenResolved,
+    });
+
+    const topNames = winners.map((p) => p.name).join(" & ");
+    const dangerNames = losers.map((p) => p.name).join(" & ");
+
+    appendLog({
+      title: "Bracket split",
+      subtitle: "Simultaneous matches",
+      outcome: `Top bracket: ${topNames}. Danger bracket: ${dangerNames}.`,
+      picks: roundPlayers.map((player) => ({
+        name: player.name,
+        move: player.move,
+      })),
+    });
+
+    beginBracketRound(
+      visibleBracket.map((player) => player.id),
+      visiblePlaces,
+      userInWinners
+        ? "You advanced to the TOP BRACKET. Playing for 1st / 2nd while the danger bracket resolves simultaneously."
+        : "You dropped into the DANGER BRACKET. Playing for 3rd / 4th while the top bracket resolves simultaneously.",
+    );
+  }
+
+  function resolveRound() {
+    const roundPlayers = players
+      .filter((player) => activeIds.includes(player.id))
+      .map((player) => ({
+        ...player,
+        move: player.move ?? randomMove(),
+        locked: true,
+      }));
+
+    setPlayers((current) =>
+      current.map((player) => {
+        const updated = roundPlayers.find((p) => p.id === player.id);
+        return updated ?? player;
+      }),
+    );
+
+    const places = currentPlacesRef.current;
+    const nextPlacements = {
+      ...placements,
+      ...hiddenPlacementsRef.current,
+    };
+
+    if (roundPlayers.length === 2) {
+      resolveHeadToHead(roundPlayers, places, nextPlacements);
+      return;
+    }
+
+    if (roundPlayers.length === 3) {
+      resolveThreePlayerBracket(roundPlayers, places, nextPlacements);
+      return;
+    }
+
+    resolveFourPlayerMain(roundPlayers, nextPlacements);
   }
 
   function startMatch() {
     if (!mounted) return;
 
-    setPlayers(makeInitialPlayers());
-    setActiveIds(["you", "riot", "shade"]);
+    const nextPlayers = createPlayers(playerCount);
+    const nextPlaces = Array.from(
+      { length: playerCount },
+      (_, index) => (index + 1) as Placement,
+    );
+
+    currentPlacesRef.current = nextPlaces;
+    hiddenPlacementsRef.current = {};
+
+    setPlayers(nextPlayers);
+    setActiveIds(nextPlayers.map((player) => player.id));
     setPlacements({});
     setResults([]);
     setRoundLog([]);
-    setMoveStats({});
     setMessage("Lock your move before the timer hits zero.");
     setRoundTitle("Main round");
     setRoundSubtext("Choose your move.");
-    setStage("main");
     setTimer(ROUND_SECONDS);
     setPhase("countdown");
+    setStage("main");
     setShowResultModal(false);
     setModalSummary([]);
     setFinishContext("final_third");
@@ -498,6 +758,7 @@ export function useDeadlastGame() {
       );
 
       setPhase("locked");
+
       return;
     }
 
@@ -526,11 +787,11 @@ export function useDeadlastGame() {
     resolvingRef.current = true;
 
     const id = window.setTimeout(() => {
-      resolveCurrentRound();
+      resolveRound();
     }, 800);
 
     return () => window.clearTimeout(id);
-  }, [phase, players, activeIds, placements, stage, buyIn]);
+  }, [phase, players, activeIds, placements]);
 
   useEffect(() => {
     if (!showResultModal || !autoPlayEnabled) return;
@@ -549,52 +810,100 @@ export function useDeadlastGame() {
 
   return {
     mounted,
+
+    playerCount,
+    setPlayerCount,
+
     buyIn,
     setBuyIn,
+
     balance,
+
     entries,
     lifetimeEntries,
+
     arenaProfile,
+
     phase,
     stage,
+
     timer,
+
     players,
+
     activeIds,
+
     placements,
+
     results,
+
     roundLog,
+
     message,
+
     roundTitle,
+
     roundSubtext,
+
     showResultModal,
     setShowResultModal,
+
     modalSummary,
+
     finishContext,
+
     moveStats,
+
     autoPlayEnabled,
     setAutoPlayEnabled,
+
     autoPlayDelay,
     setAutoPlayDelay,
+
     entriesAwardEligible,
+
     entriesEarnedThisMatch,
+
     entryToast,
+
     user,
+
     activePlayers,
+
     houseCut,
+
     showPickModal,
+
     startMatch,
+
     chooseMove,
+
     playAgain,
+
     dailyDrawPrize,
+
     sponsorSlot,
+
     drawPoolEntries,
+
     nextDrawAt,
+
     lastDrawWinner,
+
     lastDrawAt,
+
     sponsorClickStats,
+
     handleSponsorClick,
+
     recordImpression,
+
     ctr,
+
     exportSponsorReport,
   };
 }
+
+
+
+
