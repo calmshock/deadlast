@@ -18,37 +18,54 @@ function placementLabel(placement: Placement | undefined) {
 }
 
 function HandShape({ move, showMove }: { move: Move | null; showMove: boolean }) {
-  if (!showMove) {
+  const visibleMove = showMove ? move : null;
+
+  if (visibleMove === "paper") {
     return (
-      <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/20 bg-white/10">
-        <div className="h-12 w-12 rounded-full bg-white/50" />
-      </div>
+      <svg viewBox="0 0 120 120" className="h-28 w-28">
+        <rect x="26" y="18" width="13" height="60" rx="7" className="fill-cyan-100" />
+        <rect x="42" y="10" width="13" height="68" rx="7" className="fill-cyan-100" />
+        <rect x="58" y="14" width="13" height="64" rx="7" className="fill-cyan-100" />
+        <rect x="74" y="24" width="13" height="54" rx="7" className="fill-cyan-100" />
+        <rect x="32" y="62" width="58" height="38" rx="18" className="fill-cyan-200" />
+        <rect x="45" y="98" width="34" height="14" rx="7" className="fill-cyan-300" />
+      </svg>
     );
   }
 
-  if (move === "paper") {
+  if (visibleMove === "scissors") {
     return (
-      <div className="flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-cyan-200/60 bg-cyan-300/20">
-        <div className="h-14 w-12 rounded-2xl bg-cyan-100" />
-      </div>
+      <svg viewBox="0 0 120 120" className="h-28 w-28">
+        <rect x="43" y="10" width="16" height="70" rx="8" className="origin-bottom -rotate-12 fill-fuchsia-100" />
+        <rect x="62" y="10" width="16" height="70" rx="8" className="origin-bottom rotate-12 fill-fuchsia-100" />
+        <rect x="35" y="62" width="50" height="38" rx="18" className="fill-fuchsia-200" />
+        <rect x="45" y="98" width="34" height="14" rx="7" className="fill-fuchsia-300" />
+      </svg>
     );
   }
 
-  if (move === "scissors") {
+  if (visibleMove === "rock") {
     return (
-      <div className="flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-fuchsia-200/60 bg-fuchsia-300/20">
-        <div className="flex gap-2">
-          <div className="h-16 w-5 -rotate-12 rounded-full bg-fuchsia-100" />
-          <div className="h-16 w-5 rotate-12 rounded-full bg-fuchsia-100" />
-        </div>
-      </div>
+      <svg viewBox="0 0 120 120" className="h-28 w-28">
+        <rect x="24" y="34" width="18" height="34" rx="8" className="fill-lime-100" />
+        <rect x="43" y="28" width="18" height="40" rx="8" className="fill-lime-100" />
+        <rect x="62" y="30" width="18" height="38" rx="8" className="fill-lime-100" />
+        <rect x="81" y="38" width="16" height="30" rx="8" className="fill-lime-100" />
+        <rect x="28" y="58" width="68" height="44" rx="20" className="fill-lime-200" />
+        <rect x="46" y="98" width="34" height="14" rx="7" className="fill-lime-300" />
+      </svg>
     );
   }
 
   return (
-    <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-lime-200/60 bg-lime-300/20">
-      <div className="h-14 w-14 rounded-full bg-lime-100" />
-    </div>
+    <svg viewBox="0 0 120 120" className="h-28 w-28">
+      <rect x="24" y="34" width="18" height="34" rx="8" className="fill-white/50" />
+      <rect x="43" y="28" width="18" height="40" rx="8" className="fill-white/50" />
+      <rect x="62" y="30" width="18" height="38" rx="8" className="fill-white/50" />
+      <rect x="81" y="38" width="16" height="30" rx="8" className="fill-white/50" />
+      <rect x="28" y="58" width="68" height="44" rx="20" className="fill-white/30" />
+      <rect x="46" y="98" width="34" height="14" rx="7" className="fill-white/20" />
+    </svg>
   );
 }
 
@@ -59,13 +76,13 @@ export default function HandReveal({
   phase,
 }: HandRevealProps) {
   return (
-    <section className="rounded-3xl border-4 border-fuchsia-400 bg-fuchsia-950 p-6 text-white">
+    <section className="rounded-3xl border border-white/10 bg-black/30 p-5 text-white">
       <div className="mb-4">
-        <div className="text-xs uppercase tracking-[0.3em] text-fuchsia-200">
+        <div className="text-xs uppercase tracking-[0.3em] text-white/45">
           Hand reveal
         </div>
-        <h3 className="text-2xl font-black uppercase">
-          Live throw animation layer
+        <h3 className="text-xl font-black uppercase">
+          Live throw
         </h3>
       </div>
 
@@ -73,15 +90,10 @@ export default function HandReveal({
         {players.map((player) => {
           const active = activeIds.includes(player.id);
           const placement = placements[player.id];
-
-          const winner =
-            placement === 1 ||
-            placement === 2;
-
-          const loser =
-            placement === 3 ||
-            placement === 4;
           const lockedLabel = placementLabel(placement);
+
+          const winner = placement === 1 || placement === 2;
+          const loser = placement === 3 || placement === 4;
 
           const showMove =
             phase === "locked" || phase === "revealing" || phase === "results";
@@ -89,9 +101,13 @@ export default function HandReveal({
           return (
             <div
               key={player.id}
-              className={`rounded-3xl border p-4 text-center ${
-                active
-                  ? "border-cyan-300 bg-cyan-900"
+              className={`rounded-3xl border p-4 text-center transition-all duration-300 ${
+                winner
+                  ? "border-lime-300 bg-lime-900/40 shadow-[0_0_30px_rgba(132,255,120,0.35)]"
+                  : loser
+                  ? "border-red-300 bg-red-900/30 shadow-[0_0_30px_rgba(255,80,80,0.35)]"
+                  : active
+                  ? "border-cyan-300 bg-cyan-900/40"
                   : "border-white/20 bg-black/40 opacity-70"
               }`}
             >
@@ -102,14 +118,15 @@ export default function HandReveal({
               <div
                 className={`mt-4 flex justify-center transition-all duration-200 ${
                   phase === "countdown" && active && !player.locked
-                    ? "translate-y-0 animate-pulse"
+                    ? "translate-y-0 animate-bounce"
                     : ""
                 } ${
                   phase === "locked" && active
                     ? "-translate-y-3 scale-110"
                     : ""
                 } ${
-                  phase === "revealing" && active ? "translate-y-3 scale-150 brightness-125"
+                  phase === "revealing" && active
+                    ? "translate-y-3 scale-150 brightness-125"
                     : "scale-100"
                 }`}
               >
@@ -132,6 +149,4 @@ export default function HandReveal({
     </section>
   );
 }
-
-
 
