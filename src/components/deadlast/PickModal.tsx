@@ -1,6 +1,7 @@
 "use client"
 
 import type { Move, MoveStats, Phase, Placement, Player, Stage } from "@/types/game"
+import HandReveal from "@/components/deadlast/HandReveal"
 
 type Props = {
   players: Player[]
@@ -175,6 +176,16 @@ export default function PickModal({
             </div>
           )}
         </div>
+        <div className="mt-6">
+          <HandReveal
+            players={activePlayers}
+            activeIds={activePlayers.map((player) => player.id)}
+            placements={placements}
+            phase={phase}
+          />
+        </div>
+
+
 
         <div className="mt-7 text-center text-xs uppercase tracking-[0.25em] text-white/45">
           Active players this round
@@ -205,3 +216,4 @@ export default function PickModal({
     </div>
   )
 }
+

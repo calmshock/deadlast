@@ -1,10 +1,9 @@
-import { FinishContext, ResultRow } from "@/types/game";
-import { loserCopy, modalMeta } from "@/lib/game/helpers";
+import { ResultRow } from "@/types/game";
 import { fmt } from "@/lib/payouts";
 
 type ResultModalProps = {
   show: boolean;
-  finishContext: FinishContext;
+  finishContext: string;
   modalSummary: ResultRow[];
   autoPlayEnabled: boolean;
   autoPlayDelay: number;
@@ -16,13 +15,20 @@ type ResultModalProps = {
   playAgain: () => void;
 };
 
+function ordinal(place: number) {
+  if (place === 1) return "1st";
+  if (place === 2) return "2nd";
+  if (place === 3) return "3rd";
+  return "4th";
+}
+
 export default function ResultModal({
   show,
-  finishContext,
   modalSummary,
   autoPlayEnabled,
   autoPlayDelay,
   entriesAwardEligible,
+  entriesEarnedThisMatch,
   setShowResultModal,
   setAutoPlayEnabled,
   setAutoPlayDelay,
@@ -30,70 +36,99 @@ export default function ResultModal({
 }: ResultModalProps) {
   if (!show) return null;
 
-  const modalConfig = modalMeta(finishContext);
-  const modalStandings = [...modalSummary].sort((a, b) => a.placement - b.placement);
+  const standings = [...modalSummary].sort((a, b) => a.placement - b.placement);
+  const playerCount = standings.length;
+  const yourResult = standings.find((row) => row.name === "You");
+  const lastPlace = playerCount;
+
+  const youWon = yourResult?.placement === 1;
+  const youLost = yourResult?.placement === lastPlace;
+
+  const badge = youWon ? "Winner" : youLost ? "Deadlast" : "Survived";
+  const title = youWon ? "You won" : youLost ? "You finished last" : `${ordinal(yourResult?.placement ?? 2)} place`;
+
+  const body = youWon
+    ? "You avoided last and took the top payout."
+    : youLost
+    ? "You finished last. Manual last-place finishes earn prize entries."
+    : "You avoided last and earned a placement payout.";
+
+  const panelClass = youWon
+  ? "border-lime-300/30 bg-neutral-950"
+  : youLost
+  ? "border-red-300/30 bg-neutral-950"
+  : "border-cyan-300/30 bg-neutral-950";
+
+  const titleClass = youWon
+    ? "text-lime-200"
+    : youLost
+    ? "text-red-200"
+    : "text-cyan-200";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-4">
-      <div
-        className={`max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border p-6 text-center shadow-[0_0_60px_rgba(0,0,0,0.45)] sm:p-8 ${modalConfig.panelClass}`}
-      >
-        <div className={`text-xs uppercase tracking-[0.35em] ${modalConfig.badgeClass}`}>
-          {modalConfig.badge}
+      <div className={`max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border p-6 text-center shadow-[0_0_60px_rgba(0,0,0,0.45)] sm:p-8 ${panelClass}`}>
+        <div className="text-xs uppercase tracking-[0.35em] text-white/55">
+          {badge}
         </div>
 
-        <h3 className={`mt-3 text-4xl font-black uppercase sm:text-5xl ${modalConfig.titleClass}`}>
-          {modalConfig.title}
+        <h3 className={`mt-3 text-4xl font-black uppercase sm:text-5xl ${titleClass}`}>
+          {title}
         </h3>
 
-        <p className="mt-3 text-white/65">
-          {finishContext === "final_third" ? loserCopy(modalStandings) : modalConfig.body}
-        </p>
+        <p className="mt-3 text-white/70">{body}</p>
 
-        {/* ENTRY INFO (DISPLAY ONLY) */}
         <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-left">
           <div className="text-xs uppercase tracking-[0.25em] text-amber-200/60">
-            Prize Entries
+            Prize entry result
           </div>
 
           <div className="mt-2 text-sm text-white/75">
-            {entriesAwardEligible
-              ? "Manual 3rd-place finishes count toward prize entries in Arena."
+            {entriesEarnedThisMatch > 0
+              ? "You earned +1 prize entry for a manual last-place finish."
+              : entriesAwardEligible
+              ? "You manually picked, but only last place earns a prize entry."
               : "Auto-picked moves do not qualify for prize entries."}
           </div>
 
-          <div className="mt-2 text-xs text-amber-200/60">
-            Entries are tracked and awarded in Arena mode.
+          <div className="mt-2 text-2xl font-black text-amber-200">
+            +{entriesEarnedThisMatch}
           </div>
         </div>
 
         <div className="mt-6 space-y-3 text-left">
-          {modalStandings.map((row) => (
-            <div
-              key={row.name}
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-4"
-            >
-              <div>
-                <div className="text-xs uppercase tracking-[0.25em] text-white/45">
-                  {row.placement === 1
-                    ? "1st place"
-                    : row.placement === 2
-                    ? "2nd place"
-                    : "3rd place"}
-                </div>
+          {standings.map((row) => {
+            const isLast = row.placement === lastPlace;
 
-                <div className="text-2xl font-black uppercase">{row.name}</div>
-              </div>
-
+            return (
               <div
-                className={`text-2xl font-black ${
-                  row.delta > 0 ? "text-lime-300" : "text-red-300"
+                key={row.name}
+                className={`flex items-center justify-between rounded-2xl border p-4 ${
+                  isLast
+                    ? "border-red-300/20 bg-red-500/10"
+                    : "border-white/10 bg-black/20"
                 }`}
               >
-                {fmt(row.delta)}
+                <div>
+                  <div className="text-xs uppercase tracking-[0.25em] text-white/45">
+                    {ordinal(row.placement)} place
+                  </div>
+
+                  <div className="text-2xl font-black uppercase">{row.name}</div>
+
+                  {row.name === "You" ? (
+                    <div className="mt-1 text-sm text-amber-200/80">
+                      Entries: +{entriesEarnedThisMatch}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className={`text-2xl font-black ${row.delta > 0 ? "text-lime-300" : "text-red-300"}`}>
+                  {fmt(row.delta)}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
@@ -122,10 +157,6 @@ export default function ResultModal({
               </select>
             </div>
           </div>
-
-          <div className="mt-2 text-xs text-white/45">
-            When enabled, the next round starts automatically after this popup.
-          </div>
         </div>
 
         <div className="mt-6 flex justify-center gap-3">
@@ -147,3 +178,4 @@ export default function ResultModal({
     </div>
   );
 }
+

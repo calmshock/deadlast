@@ -69,7 +69,7 @@ export const BUY_INS = [1, 2, 5, 10, 50, 100] as const;
 
 export const BOT_NAMES = ["Vex", "Riot", "Knox", "Shade", "Mako", "Hex"] as const;
 
-export const ROUND_SECONDS = 8;
+export const ROUND_SECONDS = 3;
 
 export const MOVE_LABELS: Record<Move, string> = {
   rock: "Rock",

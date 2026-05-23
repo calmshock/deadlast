@@ -10,6 +10,7 @@ import DailyDrawPanel from "@/components/deadlast/DailyDrawPanel";
 import ResultModal from "@/components/deadlast/ResultModal";
 import PickModal from "@/components/deadlast/PickModal";
 import EntryToast from "@/components/deadlast/EntryToast";
+import HandReveal from "@/components/deadlast/HandReveal";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 import type { Move } from "@/types/game";
 
@@ -30,6 +31,10 @@ export default function HomePage() {
           entries={game.entries}
           entriesDelta={game.entriesEarnedThisMatch}
         />
+
+        <div className="my-6 rounded-3xl border-4 border-yellow-300 bg-yellow-500 p-6 text-center text-4xl font-black text-black">
+          TEST BANNER - PAGE.TSX IS RENDERING
+        </div>
 
         <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0 space-y-6">
@@ -62,7 +67,13 @@ export default function HomePage() {
               arenaWins={game.arenaProfile.wins}
               arenaSeconds={game.arenaProfile.seconds}
               arenaThirds={game.arenaProfile.thirds}
-              arenaPreferredPick={game.arenaProfile.preferredPick}
+              arenaPreferredPick={game.arenaProfile.preferredPick}            />
+
+            <HandReveal
+              players={game.players}
+              activeIds={game.activeIds}
+              placements={game.placements}
+              phase={game.phase}
             />
 
             <RoundStatusPanel
@@ -133,3 +144,8 @@ export default function HomePage() {
     </main>
   );
 }
+
+
+
+
+
