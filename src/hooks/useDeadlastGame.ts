@@ -788,7 +788,7 @@ export function useDeadlastGame() {
 
     const id = window.setTimeout(() => {
       resolveRound();
-    }, 800);
+    }, 1800);
 
     return () => window.clearTimeout(id);
   }, [phase, players, activeIds, placements]);
@@ -903,6 +903,8 @@ export function useDeadlastGame() {
     exportSponsorReport,
   };
 }
+
+
 
 
 

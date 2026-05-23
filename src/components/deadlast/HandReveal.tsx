@@ -9,6 +9,14 @@ type HandRevealProps = {
   phase: Phase;
 };
 
+function beats(a: Move, b: Move) {
+  return (
+    (a === "rock" && b === "scissors") ||
+    (a === "paper" && b === "rock") ||
+    (a === "scissors" && b === "paper")
+  );
+}
+
 function placementLabel(placement: Placement | undefined) {
   if (placement === 1) return "1st locked";
   if (placement === 2) return "2nd locked";
@@ -75,15 +83,41 @@ export default function HandReveal({
   placements,
   phase,
 }: HandRevealProps) {
+  const showMove =
+    phase === "locked" || phase === "revealing" || phase === "results";
+
+  const activePlayers = players.filter((player) => activeIds.includes(player.id));
+  const activeMoves = activePlayers
+    .map((player) => player.move)
+    .filter(Boolean) as Move[];
+
+  const uniqueMoves = [...new Set(activeMoves)];
+
+  let roundWinnerMove: Move | null = null;
+  let roundLoserMove: Move | null = null;
+
+  if (showMove && uniqueMoves.length === 2) {
+    const first = uniqueMoves[0];
+    const second = uniqueMoves[1];
+
+    roundWinnerMove = beats(first, second) ? first : second;
+    roundLoserMove = roundWinnerMove === first ? second : first;
+  }
+
+  const roundIsTie =
+    showMove &&
+    activeMoves.length === activePlayers.length &&
+    uniqueMoves.length !== 2;
+
+  const totalPlayers = Math.max(players.length, activePlayers.length);
+
   return (
     <section className="rounded-3xl border border-white/10 bg-black/30 p-5 text-white">
       <div className="mb-4">
         <div className="text-xs uppercase tracking-[0.3em] text-white/45">
           Hand reveal
         </div>
-        <h3 className="text-xl font-black uppercase">
-          Live throw
-        </h3>
+        <h3 className="text-xl font-black uppercase">Live throw</h3>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,28 +126,39 @@ export default function HandReveal({
           const placement = placements[player.id];
           const lockedLabel = placementLabel(placement);
 
-          const winner = placement === 1 || placement === 2;
-          const loser = placement === 3 || placement === 4;
+          const roundWon =
+            active &&
+            showMove &&
+            Boolean(roundWinnerMove) &&
+            player.move === roundWinnerMove;
 
-          const showMove =
-            phase === "locked" || phase === "revealing" || phase === "results";
+          const roundLost =
+            active &&
+            showMove &&
+            Boolean(roundLoserMove) &&
+            player.move === roundLoserMove;
+
+          const tied = active && roundIsTie;
+
+          const finalWon = Boolean(placement && placement < totalPlayers);
+          const finalLost = Boolean(placement && placement === totalPlayers);
 
           return (
             <div
               key={player.id}
               className={`rounded-3xl border p-4 text-center transition-all duration-300 ${
-                winner
-                  ? "border-lime-300 bg-lime-900/40 shadow-[0_0_30px_rgba(132,255,120,0.35)]"
-                  : loser
-                  ? "border-red-300 bg-red-900/30 shadow-[0_0_30px_rgba(255,80,80,0.35)]"
+                roundWon || finalWon
+                  ? "border-lime-300 bg-lime-900/40 shadow-[0_0_40px_rgba(132,255,120,0.45)]"
+                  : roundLost || finalLost
+                  ? "border-red-300 bg-red-900/50 shadow-[0_0_45px_rgba(255,40,40,0.55)]"
+                  : tied
+                  ? "border-yellow-300 bg-yellow-900/40 shadow-[0_0_35px_rgba(255,220,80,0.45)]"
                   : active
                   ? "border-cyan-300 bg-cyan-900/40"
                   : "border-white/20 bg-black/40 opacity-70"
               }`}
             >
-              <div className="text-sm font-black uppercase">
-                {player.name}
-              </div>
+              <div className="text-sm font-black uppercase">{player.name}</div>
 
               <div
                 className={`mt-4 flex justify-center transition-all duration-200 ${
@@ -136,6 +181,12 @@ export default function HandReveal({
               <div className="mt-4 text-xs uppercase tracking-[0.2em] text-white/70">
                 {lockedLabel
                   ? lockedLabel
+                  : tied
+                  ? "Tie / replay"
+                  : roundWon
+                  ? "Round won"
+                  : roundLost
+                  ? "Round lost"
                   : player.locked
                   ? "Move locked"
                   : active
@@ -149,4 +200,3 @@ export default function HandReveal({
     </section>
   );
 }
-
