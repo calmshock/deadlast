@@ -2,27 +2,11 @@
 
 import Header from "@/components/deadlast/Header";
 import HeroPanel from "@/components/deadlast/HeroPanel";
-import PlayersSection from "@/components/deadlast/PlayersSection";
-import RoundStatusPanel from "@/components/deadlast/RoundStatusPanel";
-import ResultsPanel from "@/components/deadlast/ResultsPanel";
-import RoundLogPanel from "@/components/deadlast/RoundLogPanel";
 import DailyDrawPanel from "@/components/deadlast/DailyDrawPanel";
-import ResultModal from "@/components/deadlast/ResultModal";
-import PickModal from "@/components/deadlast/PickModal";
-import EntryToast from "@/components/deadlast/EntryToast";
-import HandReveal from "@/components/deadlast/HandReveal";
-import PlayerHud from "@/components/deadlast/PlayerHud";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
-import type { Move } from "@/types/game";
 
 export default function HomePage() {
   const game = useDeadlastGame();
-
-  function handlePick(pick: Move) {
-    game.chooseMove(pick);
-  }
-
-  const showPickModal = game.showPickModal && !game.showResultModal;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-black text-white">
@@ -33,19 +17,7 @@ export default function HomePage() {
           entriesDelta={game.entriesEarnedThisMatch}
         />
 
-        <PlayerHud
-          balance={game.balance}
-          entries={game.entries}
-          lifetimeEntries={game.lifetimeEntries}
-          odds={
-            game.drawPoolEntries > 0 && game.entries > 0
-              ? `${((game.entries / game.drawPoolEntries) * 100).toFixed(2)}%`
-              : "0.00%"
-          }
-          countdown="Daily Draw Live"
-/>
-
-        <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="min-w-0 space-y-6">
             <HeroPanel
               buyIn={game.buyIn}
@@ -59,46 +31,24 @@ export default function HomePage() {
               startMatch={game.startMatch}
               setAutoPlayEnabled={game.setAutoPlayEnabled}
               setAutoPlayDelay={game.setAutoPlayDelay}
+              ctaLabel="Enter Arena"
+              ctaHref="/arena"
             />
 
-            <PlayersSection
-              players={game.players}
-              phase={game.phase}
-              activeIds={game.activeIds}
-              placements={game.placements}
-              results={game.results}
-              userCycleEntries={game.entries}
-              userLifetimeEntries={game.lifetimeEntries}
-              entriesAwardEligible={game.entriesAwardEligible}
-              entriesEarnedThisMatch={game.entriesEarnedThisMatch}
-              arenaAutoEnabled={game.arenaProfile.auto}
-              arenaGamesPlayed={game.arenaProfile.gamesPlayed}
-              arenaWins={game.arenaProfile.wins}
-              arenaSeconds={game.arenaProfile.seconds}
-              arenaThirds={game.arenaProfile.thirds}
-              arenaPreferredPick={game.arenaProfile.preferredPick}            />
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <div className="text-xs uppercase tracking-[0.3em] text-cyan-200/60">
+                Daily redemption loop
+              </div>
 
-            <HandReveal
-              players={game.players}
-              activeIds={game.activeIds}
-              placements={game.placements}
-              phase={game.phase}
-            />
+              <h2 className="mt-2 text-3xl font-black uppercase">
+                Lose manually. Earn entries. Win the daily draw.
+              </h2>
 
-            <RoundStatusPanel
-              phase={game.phase}
-              stage={game.stage}
-              message={game.message}
-              buyIn={game.buyIn}
-            />
-
-            <ResultsPanel
-              results={game.results}
-              entriesAwardEligible={game.entriesAwardEligible}
-              entriesEarnedThisMatch={game.entriesEarnedThisMatch}
-            />
-
-            <RoundLogPanel roundLog={game.roundLog} />
+              <p className="mt-3 max-w-3xl text-white/65">
+                Manual last-place finishes earn prize entries for the current daily cycle.
+                Auto-picked moves do not qualify. Entries reset every cycle.
+              </p>
+            </section>
           </section>
 
           <aside className="min-w-0 xl:sticky xl:top-5 xl:self-start">
@@ -111,56 +61,17 @@ export default function HomePage() {
               nextDrawAt={game.nextDrawAt}
               lastDrawWinner={game.lastDrawWinner}
               lastDrawAt={game.lastDrawAt}
+              rankedWinners={game.rankedWinners}
+              runTestDraw={game.runTestDraw}
               sponsorClickStats={game.sponsorClickStats}
               handleSponsorClick={game.handleSponsorClick}
               recordImpression={game.recordImpression}
               ctr={game.ctr}
               exportSponsorReport={game.exportSponsorReport}
-              rankedWinners={game.rankedWinners}
-              runTestDraw={game.runTestDraw}
             />
           </aside>
         </div>
       </div>
-
-      {showPickModal && (
-        <PickModal
-          players={game.players}
-          activePlayers={game.activePlayers}
-          placements={game.placements}
-          phase={game.phase}
-          stage={game.stage}
-          message={game.message}
-          timer={game.timer}
-          moveStats={game.moveStats}
-          onPick={handlePick}
-        />
-      )}
-
-      <ResultModal
-        show={game.showResultModal}
-        finishContext={game.finishContext}
-        modalSummary={game.modalSummary}
-        autoPlayEnabled={game.autoPlayEnabled}
-        autoPlayDelay={game.autoPlayDelay}
-        entriesAwardEligible={game.entriesAwardEligible}
-        entriesEarnedThisMatch={game.entriesEarnedThisMatch}
-        setShowResultModal={game.setShowResultModal}
-        setAutoPlayEnabled={game.setAutoPlayEnabled}
-        setAutoPlayDelay={game.setAutoPlayDelay}
-        playAgain={game.playAgain}
-      />
-
-      {game.entryToast && <EntryToast amount={game.entryToast.amount} />}
     </main>
   );
 }
-
-
-
-
-
-
-
-
-

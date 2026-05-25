@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BUY_INS } from "@/types/game"
 import type { GameMode, Phase } from "@/types/game"
 
@@ -14,6 +15,8 @@ type HeroPanelProps = {
 
   setBuyIn: (value: number) => void
   startMatch: () => void
+  ctaLabel?: string
+  ctaHref?: string
 
   setAutoPlayEnabled: (value: boolean) => void
   setAutoPlayDelay: (value: number) => void
@@ -34,6 +37,8 @@ export default function HeroPanel({
 
   setBuyIn,
   startMatch,
+  ctaLabel,
+  ctaHref,
 
   setAutoPlayEnabled,
   setAutoPlayDelay,
@@ -100,12 +105,21 @@ export default function HeroPanel({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          onClick={startMatch}
-          className="rounded-2xl bg-red-500 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-white shadow-[0_0_30px_rgba(239,68,68,0.35)] transition hover:scale-[1.02] hover:bg-red-400"
-        >
-          {phase === "lobby" ? "Play Now" : "New Match"}
-        </button>
+        {ctaHref ? (
+          <Link
+            href={ctaHref}
+            className="rounded-2xl bg-red-500 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-white shadow-[0_0_30px_rgba(239,68,68,0.35)] transition hover:scale-[1.02] hover:bg-red-400"
+          >
+            {ctaLabel ?? "Enter Arena"}
+          </Link>
+        ) : (
+          <button
+            onClick={startMatch}
+            className="rounded-2xl bg-red-500 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-white shadow-[0_0_30px_rgba(239,68,68,0.35)] transition hover:scale-[1.02] hover:bg-red-400"
+          >
+            {ctaLabel ?? (phase === "lobby" ? "Play Now" : "New Match")}
+          </button>
+        )}
 
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-white/70">
           <span>
@@ -177,3 +191,4 @@ export default function HeroPanel({
     </div>
   )
 }
+

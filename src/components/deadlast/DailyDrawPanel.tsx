@@ -80,7 +80,7 @@ export default function DailyDrawPanel({
   rankedWinners,
   runTestDraw,
 }: DailyDrawPanelProps) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(nextDrawAt);
   const [collapsed, setCollapsed] = useState(false);
   const hasTrackedImpression = useRef(false);
 
@@ -100,6 +100,8 @@ export default function DailyDrawPanel({
   const exportHandler = exportSponsorReport ?? onExportReport;
 
   useEffect(() => {
+    setNow(Date.now());
+
     const id = window.setInterval(() => {
       setNow(Date.now());
     }, 1000);
@@ -366,4 +368,5 @@ function ClickStat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
 
