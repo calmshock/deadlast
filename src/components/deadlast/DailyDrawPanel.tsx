@@ -31,6 +31,12 @@ type DailyDrawPanelProps = {
   ctr?: number;
   lastDrawWinner: string | null;
   lastDrawAt: number | null;
+  rankedWinners?: {
+    rank: number;
+    playerName: string;
+    prize: number;
+  }[];
+  runTestDraw?: () => void;
 };
 
 function formatCountdown(msRemaining: number) {
@@ -71,6 +77,8 @@ export default function DailyDrawPanel({
   ctr,
   lastDrawWinner,
   lastDrawAt,
+  rankedWinners,
+  runTestDraw,
 }: DailyDrawPanelProps) {
   const [now, setNow] = useState(Date.now());
   const [collapsed, setCollapsed] = useState(false);
@@ -186,6 +194,14 @@ export default function DailyDrawPanel({
             Export Report
           </button>
 
+          <button
+            type="button"
+            onClick={runTestDraw}
+            className="rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/15"
+          >
+            Run Test Draw
+          </button>
+
           <div className="rounded-2xl border border-amber-300/20 bg-amber-500/10 px-4 py-3 text-center">
             <div className="text-xs uppercase tracking-[0.22em] text-amber-200/60">
               Next draw
@@ -254,6 +270,37 @@ export default function DailyDrawPanel({
               </div>
             </div>
 
+            {rankedWinners && rankedWinners.length > 0 ? (
+              <div className="rounded-2xl border border-lime-300/20 bg-lime-500/10 p-4">
+                <div className="text-xs uppercase tracking-[0.22em] text-lime-200/60">
+                  Daily draw winners
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {rankedWinners.map((winner) => (
+                    <div
+                      key={`${winner.rank}-${winner.playerName}`}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    >
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.15em] text-white/45">
+                          #{winner.rank}
+                        </div>
+
+                        <div className="text-sm font-black uppercase text-white">
+                          {winner.playerName}
+                        </div>
+                      </div>
+
+                      <div className="text-sm font-black text-lime-300">
+                        ${winner.prize}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-white/45">
                 Sponsor clicks
@@ -319,3 +366,4 @@ function ClickStat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+

@@ -11,6 +11,7 @@ import ResultModal from "@/components/deadlast/ResultModal";
 import PickModal from "@/components/deadlast/PickModal";
 import EntryToast from "@/components/deadlast/EntryToast";
 import HandReveal from "@/components/deadlast/HandReveal";
+import PlayerHud from "@/components/deadlast/PlayerHud";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 import type { Move } from "@/types/game";
 
@@ -31,6 +32,18 @@ export default function HomePage() {
           entries={game.entries}
           entriesDelta={game.entriesEarnedThisMatch}
         />
+
+        <PlayerHud
+          balance={game.balance}
+          entries={game.entries}
+          lifetimeEntries={game.lifetimeEntries}
+          odds={
+            game.drawPoolEntries > 0 && game.entries > 0
+              ? `${((game.entries / game.drawPoolEntries) * 100).toFixed(2)}%`
+              : "0.00%"
+          }
+          countdown="Daily Draw Live"
+/>
 
         <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0 space-y-6">
@@ -103,6 +116,8 @@ export default function HomePage() {
               recordImpression={game.recordImpression}
               ctr={game.ctr}
               exportSponsorReport={game.exportSponsorReport}
+              rankedWinners={game.rankedWinners}
+              runTestDraw={game.runTestDraw}
             />
           </aside>
         </div>
@@ -140,6 +155,8 @@ export default function HomePage() {
     </main>
   );
 }
+
+
 
 
 

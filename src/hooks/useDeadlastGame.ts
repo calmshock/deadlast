@@ -17,6 +17,10 @@ import type {
 import { BOT_NAMES, ROUND_SECONDS } from "@/types/game";
 import { readArenaProgress, writeArenaProgress } from "@/lib/arena/progress";
 import { payoutForPlacement } from "@/lib/payouts";
+import {
+  buildDrawEntries,
+  runRankedDailyDraw,
+} from "@/lib/draws/daily";
 
 type EntryToast = {
   id: number;
@@ -170,10 +174,18 @@ export function useDeadlastGame() {
     href: "#",
     imageUrl: "/calgary-lawn-reset-logo.png",
   });
-  const [drawPoolEntries] = useState(124);
+  const [drawPoolEntries, setDrawPoolEntries] = useState(124);
+  const [simulatePoolActivity, setSimulatePoolActivity] = useState(true);
   const [nextDrawAt] = useState(Date.now() + 1000 * 60 * 60 * 8);
-  const [lastDrawWinner] = useState<string | null>(null);
-  const [lastDrawAt] = useState<number | null>(null);
+  const [lastDrawWinner, setLastDrawWinner] = useState<string | null>(null);
+  const [rankedWinners, setRankedWinners] = useState<
+    {
+      rank: number;
+      playerName: string;
+      prize: number;
+    }[]
+  >([]);
+  const [lastDrawAt, setLastDrawAt] = useState<number | null>(null);
   const [sponsorClickStats] = useState<SponsorStats>({
     totalClicks: 0,
     dailyClicks: 0,
@@ -350,6 +362,8 @@ export function useDeadlastGame() {
         });
 
         syncEntriesFromProgress();
+
+    setDrawPoolEntries(0);
       }
     }
 
@@ -724,8 +738,21 @@ export function useDeadlastGame() {
 
   useEffect(() => {
     setMounted(true);
+
+    const savedBalance = window.localStorage.getItem("deadlast:balance");
+    if (savedBalance) {
+      setBalance(Number(savedBalance));
+    }
     syncEntriesFromProgress();
+
+    setDrawPoolEntries(0);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    window.localStorage.setItem("deadlast:balance", String(balance));
+  }, [balance]);
 
   useEffect(() => {
     if (!entryToast) return;
@@ -794,6 +821,16 @@ export function useDeadlastGame() {
   }, [phase, players, activeIds, placements]);
 
   useEffect(() => {
+    if (!simulatePoolActivity) return;
+
+    const id = window.setInterval(() => {
+      setDrawPoolEntries((current) => current + Math.floor(Math.random() * 3) + 1);
+    }, 5000);
+
+    return () => window.clearInterval(id);
+  }, [simulatePoolActivity]);
+
+  useEffect(() => {
     if (!showResultModal || !autoPlayEnabled) return;
 
     const id = window.setTimeout(() => {
@@ -803,6 +840,50 @@ export function useDeadlastGame() {
 
     return () => window.clearTimeout(id);
   }, [showResultModal, autoPlayEnabled, autoPlayDelay]);
+
+  function runTestDraw() {
+    const simulatedPool = [
+      ...buildDrawEntries("You", entries),
+      ...buildDrawEntries("Nova", 14),
+      ...buildDrawEntries("Ghost", 9),
+      ...buildDrawEntries("Rogue", 6),
+      ...buildDrawEntries("Cipher", 4),
+      ...buildDrawEntries("Blitz", 3),
+      ...buildDrawEntries("Vex", 2),
+    ];
+
+    const winners = runRankedDailyDraw(simulatedPool);
+
+    setRankedWinners(winners);
+
+    setLastDrawWinner(winners[0]?.playerName ?? null);
+
+    setLastDrawAt(Date.now());
+
+    const yourPrize = winners
+      .filter((winner) => winner.playerName === "You")
+      .reduce((total, winner) => total + winner.prize, 0);
+
+    if (yourPrize > 0) {
+      setBalance((current) => +(current + yourPrize).toFixed(2));
+    }
+
+    const progress = readArenaProgress();
+
+    writeArenaProgress({
+      ...progress,
+      sessionLossEntries: 0,
+      sessionEligibleLosses: 0,
+      sessionIneligibleAutoLosses: 0,
+      lastUpdatedAt: Date.now(),
+    });
+
+    syncEntriesFromProgress();
+
+    setDrawPoolEntries(0);
+
+    console.log("DAILY DRAW RESULTS", winners);
+  }
 
   const handleSponsorClick = useCallback(() => {}, []);
   const recordImpression = useCallback(() => {}, []);
@@ -885,12 +966,15 @@ export function useDeadlastGame() {
     sponsorSlot,
 
     drawPoolEntries,
+    simulatePoolActivity,
+    setSimulatePoolActivity,
 
     nextDrawAt,
 
     lastDrawWinner,
-
     lastDrawAt,
+    rankedWinners,
+    runTestDraw,
 
     sponsorClickStats,
 
@@ -903,6 +987,13 @@ export function useDeadlastGame() {
     exportSponsorReport,
   };
 }
+
+
+
+
+
+
+
 
 
 
