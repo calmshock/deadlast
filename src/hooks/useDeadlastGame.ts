@@ -176,7 +176,13 @@ export function useDeadlastGame() {
   });
   const [drawPoolEntries, setDrawPoolEntries] = useState(124);
   const [simulatePoolActivity, setSimulatePoolActivity] = useState(true);
-  const [nextDrawAt] = useState(Date.now() + 1000 * 60 * 60 * 8);
+  const [nextDrawAt, setNextDrawAt] = useState(() => {
+    if (typeof window === "undefined") return Date.now() + 1000 * 60 * 60 * 24;
+
+    const saved = window.localStorage.getItem("deadlast:draw:nextDrawAt");
+
+    return saved ? Number(saved) : Date.now() + 1000 * 60 * 60 * 24;
+  });
   const [lastDrawWinner, setLastDrawWinner] = useState<string | null>(null);
   const [rankedWinners, setRankedWinners] = useState<
     {
@@ -363,7 +369,28 @@ export function useDeadlastGame() {
 
         syncEntriesFromProgress();
 
+    const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
+    if (savedPool) setDrawPoolEntries(Number(savedPool));
+
+    const savedWinner = window.localStorage.getItem("deadlast:draw:lastWinner");
+    if (savedWinner) setLastDrawWinner(savedWinner);
+
+    const savedLastDrawAt = window.localStorage.getItem("deadlast:draw:lastDrawAt");
+    if (savedLastDrawAt) setLastDrawAt(Number(savedLastDrawAt));
+
+    const savedWinners = window.localStorage.getItem("deadlast:draw:winners");
+    if (savedWinners) {
+      try {
+        setRankedWinners(JSON.parse(savedWinners));
+      } catch {}
+    }
+
     setDrawPoolEntries(0);
+    window.localStorage.setItem("deadlast:draw:poolEntries", "0");
+
+    const nextCycle = Date.now() + 1000 * 60 * 60 * 24;
+    setNextDrawAt(nextCycle);
+    window.localStorage.setItem("deadlast:draw:nextDrawAt", String(nextCycle));
       }
     }
 
@@ -745,7 +772,28 @@ export function useDeadlastGame() {
     }
     syncEntriesFromProgress();
 
+    const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
+    if (savedPool) setDrawPoolEntries(Number(savedPool));
+
+    const savedWinner = window.localStorage.getItem("deadlast:draw:lastWinner");
+    if (savedWinner) setLastDrawWinner(savedWinner);
+
+    const savedLastDrawAt = window.localStorage.getItem("deadlast:draw:lastDrawAt");
+    if (savedLastDrawAt) setLastDrawAt(Number(savedLastDrawAt));
+
+    const savedWinners = window.localStorage.getItem("deadlast:draw:winners");
+    if (savedWinners) {
+      try {
+        setRankedWinners(JSON.parse(savedWinners));
+      } catch {}
+    }
+
     setDrawPoolEntries(0);
+    window.localStorage.setItem("deadlast:draw:poolEntries", "0");
+
+    const nextCycle = Date.now() + 1000 * 60 * 60 * 24;
+    setNextDrawAt(nextCycle);
+    window.localStorage.setItem("deadlast:draw:nextDrawAt", String(nextCycle));
   }, []);
 
   useEffect(() => {
@@ -821,10 +869,24 @@ export function useDeadlastGame() {
   }, [phase, players, activeIds, placements]);
 
   useEffect(() => {
+    const id = window.setInterval(() => {
+      if (Date.now() >= nextDrawAt) {
+        runTestDraw();
+      }
+    }, 1000);
+
+    return () => window.clearInterval(id);
+  }, [nextDrawAt, entries]);
+
+  useEffect(() => {
     if (!simulatePoolActivity) return;
 
     const id = window.setInterval(() => {
-      setDrawPoolEntries((current) => current + Math.floor(Math.random() * 3) + 1);
+      setDrawPoolEntries((current) => {
+        const next = current + Math.floor(Math.random() * 3) + 1;
+        window.localStorage.setItem("deadlast:draw:poolEntries", String(next));
+        return next;
+      });
     }, 5000);
 
     return () => window.clearInterval(id);
@@ -855,10 +917,16 @@ export function useDeadlastGame() {
     const winners = runRankedDailyDraw(simulatedPool);
 
     setRankedWinners(winners);
+    window.localStorage.setItem("deadlast:draw:winners", JSON.stringify(winners));
 
-    setLastDrawWinner(winners[0]?.playerName ?? null);
+    const winnerName = winners[0]?.playerName ?? null;
+    setLastDrawWinner(winnerName);
+    window.localStorage.setItem("deadlast:draw:lastWinner", winnerName ?? "");
 
-    setLastDrawAt(Date.now());
+    const completedAt = Date.now();
+
+    setLastDrawAt(completedAt);
+    window.localStorage.setItem("deadlast:draw:lastDrawAt", String(completedAt));
 
     const yourPrize = winners
       .filter((winner) => winner.playerName === "You")
@@ -880,7 +948,28 @@ export function useDeadlastGame() {
 
     syncEntriesFromProgress();
 
+    const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
+    if (savedPool) setDrawPoolEntries(Number(savedPool));
+
+    const savedWinner = window.localStorage.getItem("deadlast:draw:lastWinner");
+    if (savedWinner) setLastDrawWinner(savedWinner);
+
+    const savedLastDrawAt = window.localStorage.getItem("deadlast:draw:lastDrawAt");
+    if (savedLastDrawAt) setLastDrawAt(Number(savedLastDrawAt));
+
+    const savedWinners = window.localStorage.getItem("deadlast:draw:winners");
+    if (savedWinners) {
+      try {
+        setRankedWinners(JSON.parse(savedWinners));
+      } catch {}
+    }
+
     setDrawPoolEntries(0);
+    window.localStorage.setItem("deadlast:draw:poolEntries", "0");
+
+    const nextCycle = Date.now() + 1000 * 60 * 60 * 24;
+    setNextDrawAt(nextCycle);
+    window.localStorage.setItem("deadlast:draw:nextDrawAt", String(nextCycle));
 
     console.log("DAILY DRAW RESULTS", winners);
   }
@@ -987,6 +1076,8 @@ export function useDeadlastGame() {
     exportSponsorReport,
   };
 }
+
+
 
 
 

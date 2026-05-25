@@ -6,14 +6,15 @@ import PlayersSection from "@/components/deadlast/PlayersSection";
 import RoundStatusPanel from "@/components/deadlast/RoundStatusPanel";
 import ResultsPanel from "@/components/deadlast/ResultsPanel";
 import RoundLogPanel from "@/components/deadlast/RoundLogPanel";
-import DailyDrawPanel from "@/components/deadlast/DailyDrawPanel";
 import ResultModal from "@/components/deadlast/ResultModal";
 import PickModal from "@/components/deadlast/PickModal";
 import EntryToast from "@/components/deadlast/EntryToast";
+import PlayerHud from "@/components/deadlast/PlayerHud";
+import HandReveal from "@/components/deadlast/HandReveal";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 import type { Move } from "@/types/game";
 
-export default function HomePage() {
+export default function ArenaPage() {
   const game = useDeadlastGame();
 
   function handlePick(pick: Move) {
@@ -22,82 +23,82 @@ export default function HomePage() {
 
   const showPickModal = game.showPickModal && !game.showResultModal;
 
+  const odds =
+    game.drawPoolEntries > 0 && game.entries > 0
+      ? `${((game.entries / game.drawPoolEntries) * 100).toFixed(2)}%`
+      : "0.00%";
+
   return (
-    <main className="min-h-screen overflow-x-hidden bg-black text-white">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,#18181b_0%,#000_70%)] text-white">
+      <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
         <Header
           balance={game.balance}
           entries={game.entries}
           entriesDelta={game.entriesEarnedThisMatch}
         />
 
-        <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="min-w-0 space-y-6">
-            <HeroPanel
-              buyIn={game.buyIn}
-              houseCut={game.houseCut}
-              phase={game.phase}
-              playerCount={game.playerCount}
-              setPlayerCount={game.setPlayerCount}
-              autoPlayEnabled={game.autoPlayEnabled}
-              autoPlayDelay={game.autoPlayDelay}
-              setBuyIn={game.setBuyIn}
-              startMatch={game.startMatch}
-              setAutoPlayEnabled={game.setAutoPlayEnabled}
-              setAutoPlayDelay={game.setAutoPlayDelay}
-            />
+        <PlayerHud
+          balance={game.balance}
+          entries={game.entries}
+          lifetimeEntries={game.lifetimeEntries}
+          odds={odds}
+          countdown="Daily Draw Live"
+        />
 
-            <PlayersSection
-              players={game.players}
-              phase={game.phase}
-              activeIds={game.activeIds}
-              placements={game.placements}
-              results={game.results}
-              userCycleEntries={game.entries}
-              userLifetimeEntries={game.lifetimeEntries}
-              entriesAwardEligible={game.entriesAwardEligible}
-              entriesEarnedThisMatch={game.entriesEarnedThisMatch}
-              arenaAutoEnabled={game.arenaProfile.auto}
-              arenaGamesPlayed={game.arenaProfile.gamesPlayed}
-              arenaWins={game.arenaProfile.wins}
-              arenaSeconds={game.arenaProfile.seconds}
-              arenaThirds={game.arenaProfile.thirds}
-              arenaPreferredPick={game.arenaProfile.preferredPick}
-            />
+        <div className="mt-6 space-y-6">
+          <HeroPanel
+            buyIn={game.buyIn}
+            houseCut={game.houseCut}
+            phase={game.phase}
+            playerCount={game.playerCount}
+            setPlayerCount={game.setPlayerCount}
+            autoPlayEnabled={game.autoPlayEnabled}
+            autoPlayDelay={game.autoPlayDelay}
+            setBuyIn={game.setBuyIn}
+            startMatch={game.startMatch}
+            setAutoPlayEnabled={game.setAutoPlayEnabled}
+            setAutoPlayDelay={game.setAutoPlayDelay}
+          />
 
-            <RoundStatusPanel
-              phase={game.phase}
-              stage={game.stage}
-              message={game.message}
-              buyIn={game.buyIn}
-            />
+          <HandReveal
+            players={game.players}
+            activeIds={game.activeIds}
+            placements={game.placements}
+            phase={game.phase}
+          />
 
-            <ResultsPanel
-              results={game.results}
-              entriesAwardEligible={game.entriesAwardEligible}
-              entriesEarnedThisMatch={game.entriesEarnedThisMatch}
-            />
+          <PlayersSection
+            players={game.players}
+            phase={game.phase}
+            activeIds={game.activeIds}
+            placements={game.placements}
+            results={game.results}
+            userCycleEntries={game.entries}
+            userLifetimeEntries={game.lifetimeEntries}
+            entriesAwardEligible={game.entriesAwardEligible}
+            entriesEarnedThisMatch={game.entriesEarnedThisMatch}
+            arenaAutoEnabled={game.arenaProfile.auto}
+            arenaGamesPlayed={game.arenaProfile.gamesPlayed}
+            arenaWins={game.arenaProfile.wins}
+            arenaSeconds={game.arenaProfile.seconds}
+            arenaThirds={game.arenaProfile.thirds}
+            arenaPreferredPick={game.arenaProfile.preferredPick}
+          />
 
-            <RoundLogPanel roundLog={game.roundLog} />
-          </section>
+          <RoundStatusPanel
+            phase={game.phase}
+            stage={game.stage}
+            message={game.message}
+            buyIn={game.buyIn}
+          />
 
-          <aside className="min-w-0 xl:sticky xl:top-5 xl:self-start">
-            <DailyDrawPanel
-              entries={game.entries}
-              lifetimeEntries={game.lifetimeEntries}
-              dailyDrawPrize={game.dailyDrawPrize}
-              sponsorSlot={game.sponsorSlot}
-              drawPoolEntries={game.drawPoolEntries}
-              nextDrawAt={game.nextDrawAt}
-              lastDrawWinner={game.lastDrawWinner}
-              lastDrawAt={game.lastDrawAt}
-              sponsorClickStats={game.sponsorClickStats}
-              handleSponsorClick={game.handleSponsorClick}
-              recordImpression={game.recordImpression}
-              ctr={game.ctr}
-              exportSponsorReport={game.exportSponsorReport}
-            />
-          </aside>
+          <ResultsPanel
+            results={game.results}
+            entriesAwardEligible={game.entriesAwardEligible}
+            entriesEarnedThisMatch={game.entriesEarnedThisMatch}
+          />
+
+          <RoundLogPanel roundLog={game.roundLog} />
         </div>
       </div>
 
