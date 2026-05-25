@@ -32,10 +32,6 @@ export default function HomePage() {
           entriesDelta={game.entriesEarnedThisMatch}
         />
 
-        <div className="my-6 rounded-3xl border-4 border-yellow-300 bg-yellow-500 p-6 text-center text-4xl font-black text-black">
-          TEST BANNER - PAGE.TSX IS RENDERING
-        </div>
-
         <div className="mt-6 grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0 space-y-6">
             <HeroPanel
@@ -144,6 +140,8 @@ export default function HomePage() {
     </main>
   );
 }
+
+
 
 
 

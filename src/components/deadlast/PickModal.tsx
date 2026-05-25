@@ -94,21 +94,21 @@ export default function PickModal({
   const revealing = phase === "locked" || phase === "revealing"
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/75 px-4">
-      <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-neutral-900 p-6 text-white shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+    <div className="fixed inset-0 flex items-start justify-center overflow-y-auto bg-black/75 px-3 py-3">
+      <div className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-900 p-2 text-white shadow-[0_0_60px_rgba(0,0,0,0.6)]">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-[0.3em] text-white/45">
+          <div className="text-xs uppercase tracking-[0.15em] text-white/45">
             {stageLabel(stage, activePlayers, placements)}
           </div>
 
-          <div className="mt-2 text-4xl font-black text-red-300">{timer}</div>
+          <div className="mt-2 text-xl font-black text-red-300">{timer}</div>
 
           {waitingAfterPlacement ? (
-            <div className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-5 py-4">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">
+            <div className="mt-2 rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2">
+              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">
                 {placementLabel(userPlacement)}
               </div>
-              <div className="mt-1 text-2xl font-black uppercase text-cyan-200">
+              <div className="mt-1 text-lg font-black uppercase text-cyan-200">
                 Waiting for remaining places
               </div>
               <div className="mt-2 text-sm text-white/60">
@@ -116,11 +116,11 @@ export default function PickModal({
               </div>
             </div>
           ) : revealing ? (
-            <div className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-4">
-              <div className="text-xs uppercase tracking-[0.25em] text-amber-200/70">
+            <div className="mt-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2">
+              <div className="text-xs uppercase tracking-[0.18em] text-amber-200/70">
                 Revealing
               </div>
-              <div className="mt-1 text-2xl font-black uppercase text-amber-200">
+              <div className="mt-1 text-lg font-black uppercase text-amber-200">
                 Resolving round
               </div>
               <div className="mt-2 text-sm text-white/60">
@@ -128,11 +128,11 @@ export default function PickModal({
               </div>
             </div>
           ) : userLocked ? (
-            <div className="mt-5 rounded-2xl border border-lime-300/30 bg-lime-400/10 px-5 py-4">
-              <div className="text-xs uppercase tracking-[0.25em] text-lime-200/70">
+            <div className="mt-2 rounded-xl border border-lime-300/30 bg-lime-400/10 px-3 py-2">
+              <div className="text-xs uppercase tracking-[0.18em] text-lime-200/70">
                 Move locked
               </div>
-              <div className="mt-1 text-2xl font-black uppercase text-lime-200">
+              <div className="mt-1 text-lg font-black uppercase text-lime-200">
                 {userMove}
               </div>
               <div className="mt-2 text-sm text-white/60">
@@ -140,34 +140,34 @@ export default function PickModal({
               </div>
             </div>
           ) : userIsActive ? (
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => onPick("rock")}
-                className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-lg font-black transition hover:bg-white/20"
+                className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 text-base font-black transition hover:bg-white/20"
               >
                 Rock
               </button>
 
               <button
                 onClick={() => onPick("paper")}
-                className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-lg font-black transition hover:bg-white/20"
+                className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 text-base font-black transition hover:bg-white/20"
               >
                 Paper
               </button>
 
               <button
                 onClick={() => onPick("scissors")}
-                className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-lg font-black transition hover:bg-white/20"
+                className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 text-base font-black transition hover:bg-white/20"
               >
                 Scissors
               </button>
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-4">
-              <div className="text-xs uppercase tracking-[0.25em] text-white/45">
+            <div className="mt-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/45">
                 Spectating tie-break
               </div>
-              <div className="mt-1 text-2xl font-black uppercase text-white/80">
+              <div className="mt-1 text-lg font-black uppercase text-white/80">
                 Waiting
               </div>
               <div className="mt-2 text-sm text-white/60">
@@ -176,7 +176,7 @@ export default function PickModal({
             </div>
           )}
         </div>
-        <div className="mt-6">
+        <div className="mt-2">
           <HandReveal
             players={activePlayers}
             activeIds={activePlayers.map((player) => player.id)}
@@ -187,15 +187,14 @@ export default function PickModal({
 
 
 
-        <div className="mt-7 text-center text-xs uppercase tracking-[0.25em] text-white/45">
+        <div className="mt-2 text-center text-xs uppercase tracking-[0.18em] text-white/45">
           Active players this round
         </div>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {activePlayers.map((player) => (
+        <div className="mx-auto flex w-full flex-wrap items-center justify-center gap-3">{activePlayers.map((player) => (
             <div
               key={player.id}
-              className={`rounded-2xl border px-4 py-4 text-center ${
+              className={`rounded-xl border px-4 py-2 text-center ${
                 player.locked
                   ? "border-lime-300/25 bg-lime-400/10"
                   : "border-cyan-300/20 bg-cyan-400/10"
@@ -209,11 +208,16 @@ export default function PickModal({
           ))}
         </div>
 
-        <div className="mt-6 text-center text-xs uppercase tracking-[0.2em] text-white/35">
+        <div className="mt-2 text-center text-xs uppercase tracking-[0.15em] text-white/35">
           Round committed — no cancel after match start
         </div>
       </div>
     </div>
   )
 }
+
+
+
+
+
 

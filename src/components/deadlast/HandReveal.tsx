@@ -30,7 +30,7 @@ function HandShape({ move, showMove }: { move: Move | null; showMove: boolean })
 
   if (visibleMove === "paper") {
     return (
-      <svg viewBox="0 0 120 120" className="h-28 w-28">
+      <svg viewBox="0 0 120 120" className="h-12 w-12">
         <rect x="26" y="18" width="13" height="60" rx="7" className="fill-cyan-100" />
         <rect x="42" y="10" width="13" height="68" rx="7" className="fill-cyan-100" />
         <rect x="58" y="14" width="13" height="64" rx="7" className="fill-cyan-100" />
@@ -43,7 +43,7 @@ function HandShape({ move, showMove }: { move: Move | null; showMove: boolean })
 
   if (visibleMove === "scissors") {
     return (
-      <svg viewBox="0 0 120 120" className="h-28 w-28">
+      <svg viewBox="0 0 120 120" className="h-12 w-12">
         <rect x="43" y="10" width="16" height="70" rx="8" className="origin-bottom -rotate-12 fill-fuchsia-100" />
         <rect x="62" y="10" width="16" height="70" rx="8" className="origin-bottom rotate-12 fill-fuchsia-100" />
         <rect x="35" y="62" width="50" height="38" rx="18" className="fill-fuchsia-200" />
@@ -54,7 +54,7 @@ function HandShape({ move, showMove }: { move: Move | null; showMove: boolean })
 
   if (visibleMove === "rock") {
     return (
-      <svg viewBox="0 0 120 120" className="h-28 w-28">
+      <svg viewBox="0 0 120 120" className="h-12 w-12">
         <rect x="24" y="34" width="18" height="34" rx="8" className="fill-lime-100" />
         <rect x="43" y="28" width="18" height="40" rx="8" className="fill-lime-100" />
         <rect x="62" y="30" width="18" height="38" rx="8" className="fill-lime-100" />
@@ -66,7 +66,7 @@ function HandShape({ move, showMove }: { move: Move | null; showMove: boolean })
   }
 
   return (
-    <svg viewBox="0 0 120 120" className="h-28 w-28">
+    <svg viewBox="0 0 120 120" className="h-12 w-12">
       <rect x="24" y="34" width="18" height="34" rx="8" className="fill-white/50" />
       <rect x="43" y="28" width="18" height="40" rx="8" className="fill-white/50" />
       <rect x="62" y="30" width="18" height="38" rx="8" className="fill-white/50" />
@@ -112,16 +112,15 @@ export default function HandReveal({
   const totalPlayers = Math.max(players.length, activePlayers.length);
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-black/30 p-5 text-white">
-      <div className="mb-4">
+    <section className="rounded-3xl border border-white/10 bg-black/30 p-5 text-white text-center">
+      <div className="mb-2">
         <div className="text-xs uppercase tracking-[0.3em] text-white/45">
           Hand reveal
         </div>
         <h3 className="text-xl font-black uppercase">Live throw</h3>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {players.map((player) => {
+      <div className="mx-auto flex w-full flex-wrap items-center justify-center gap-4">{players.map((player) => {
           const active = activeIds.includes(player.id);
           const placement = placements[player.id];
           const lockedLabel = placementLabel(placement);
@@ -161,7 +160,7 @@ export default function HandReveal({
               <div className="text-sm font-black uppercase">{player.name}</div>
 
               <div
-                className={`mt-4 flex justify-center transition-all duration-200 ${
+                className={`mt-2 flex justify-center transition-all duration-200 ${
                   phase === "countdown" && active && !player.locked
                     ? "translate-y-0 animate-bounce"
                     : ""
@@ -178,7 +177,7 @@ export default function HandReveal({
                 <HandShape move={player.move} showMove={showMove} />
               </div>
 
-              <div className="mt-4 text-xs uppercase tracking-[0.2em] text-white/70">
+              <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/70">
                 {lockedLabel
                   ? lockedLabel
                   : tied
@@ -200,3 +199,7 @@ export default function HandReveal({
     </section>
   );
 }
+
+
+
+
