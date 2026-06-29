@@ -57,7 +57,7 @@ export default function ArenaPage() {
         playAgain={game.playAgain}
       />
 
-      {game.entryToast && <EntryToast amount={game.entryToast.amount} />}
+      <EntryToast toast={game.entryToast} />
     </main>
   );
 }

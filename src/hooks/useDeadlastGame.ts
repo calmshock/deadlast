@@ -15,7 +15,7 @@ import type {
 } from "@/types/game";
 
 import { BOT_NAMES, ROUND_SECONDS } from "@/types/game";
-import { readArenaProgress, writeArenaProgress } from "@/lib/arena/progress";
+import { useArenaProgress } from "@/contexts/ArenaProgressContext";
 import { payoutForPlacement } from "@/lib/payouts";
 import {
   buildDrawEntries,
@@ -140,6 +140,7 @@ function resolveHiddenHeadToHead(
 }
 
 export function useDeadlastGame() {
+  const arenaProgress = useArenaProgress();
   const [mounted, setMounted] = useState(false);
   const [playerCount, setPlayerCount] = useState<GameMode>(3);
   const [buyIn, setBuyIn] = useState(1);
@@ -164,8 +165,9 @@ export function useDeadlastGame() {
   const [entriesAwardEligible, setEntriesAwardEligible] = useState(false);
   const [entriesEarnedThisMatch, setEntriesEarnedThisMatch] = useState(0);
   const [entryToast, setEntryToast] = useState<EntryToast | null>(null);
-  const [entries, setEntries] = useState(0);
-  const [lifetimeEntries, setLifetimeEntries] = useState(0);
+  // Entry state now comes from ArenaProgressContext
+  // const [entries, setEntries] = useState(0);
+  // const [lifetimeEntries, setLifetimeEntries] = useState(0);
   const [dailyDrawPrize] = useState("$50 Cash");
   const [sponsorSlot] = useState({
     name: "Sponsor Slot",
@@ -217,6 +219,10 @@ export function useDeadlastGame() {
   const awardedEntryRef = useRef(false);
   const resolvingRef = useRef(false);
 
+  // Expose entries from context
+  const entries = arenaProgress.progress.sessionLossEntries;
+  const lifetimeEntries = arenaProgress.progress.lifetimeLossEntries;
+
   const user = useMemo(
     () => players.find((player) => player.isUser) ?? null,
     [players],
@@ -242,12 +248,12 @@ export function useDeadlastGame() {
     );
   }, [sponsorClickStats]);
 
-  function syncEntriesFromProgress() {
-    const progress = readArenaProgress();
-
-    setEntries(progress.sessionLossEntries);
-    setLifetimeEntries(progress.lifetimeLossEntries);
-  }
+  // No longer needed - entries come directly from context
+  // function syncEntriesFromProgress() {
+  //   const progress = readArenaProgress();
+  //   setEntries(progress.sessionLossEntries);
+  //   setLifetimeEntries(progress.lifetimeLossEntries);
+  // }
 
   function appendLog(entry: Omit<RoundLogEntry, "id">) {
     setRoundLog((current) => [
@@ -347,27 +353,18 @@ export function useDeadlastGame() {
       setEntriesEarnedThisMatch(earned);
 
       if (earned > 0 && !awardedEntryRef.current) {
-        const progress = readArenaProgress();
-
-        const nextProgress = {
-          ...progress,
-          sessionLossEntries: progress.sessionLossEntries + 1,
-          lifetimeLossEntries: progress.lifetimeLossEntries + 1,
-          sessionEligibleLosses: progress.sessionEligibleLosses + 1,
-          lifetimeEligibleLosses: progress.lifetimeEligibleLosses + 1,
-          lastUpdatedAt: Date.now(),
-        };
-
         awardedEntryRef.current = true;
 
-        writeArenaProgress(nextProgress);
+        // Update progress through context (single source of truth)
+        arenaProgress.addSessionLossEntry();
+        arenaProgress.addLifetimeLossEntry();
+        arenaProgress.addSessionEligibleLoss();
+        arenaProgress.addLifetimeEligibleLoss();
 
         setEntryToast({
           id: Date.now(),
           amount: 1,
         });
-
-        syncEntriesFromProgress();
 
     const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
     if (savedPool) setDrawPoolEntries(Number(savedPool));
@@ -792,7 +789,7 @@ export function useDeadlastGame() {
     if (savedBalance) {
       setBalance(Number(savedBalance));
     }
-    syncEntriesFromProgress();
+    // Entries now automatically synced from context
 
     const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
     if (savedPool) setDrawPoolEntries(Number(savedPool));
@@ -958,17 +955,8 @@ export function useDeadlastGame() {
       setBalance((current) => +(current + yourPrize).toFixed(2));
     }
 
-    const progress = readArenaProgress();
-
-    writeArenaProgress({
-      ...progress,
-      sessionLossEntries: 0,
-      sessionEligibleLosses: 0,
-      sessionIneligibleAutoLosses: 0,
-      lastUpdatedAt: Date.now(),
-    });
-
-    syncEntriesFromProgress();
+    // Reset session progress through context
+    arenaProgress.resetSessionProgress();
 
     const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
     if (savedPool) setDrawPoolEntries(Number(savedPool));

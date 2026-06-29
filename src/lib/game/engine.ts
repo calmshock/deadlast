@@ -47,7 +47,7 @@ export function runMainRound(
       return {
         type: "finished",
         placements: finalPlacements,
-        results: buildResults(players, finalPlacements, buyIn),
+        results: buildResults(players, finalPlacements, buyIn, 3),
       };
     }
 
@@ -97,6 +97,6 @@ export function runTieBreak(
   return {
     type: "finished",
     placements: finalPlacements,
-    results: buildResults(players, finalPlacements, buyIn),
+    results: buildResults(players, finalPlacements, buyIn, 3),
   };
 }

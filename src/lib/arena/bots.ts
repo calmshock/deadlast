@@ -48,6 +48,7 @@ export function createBot(index?: number): ArenaPlayer {
     wins: 0,
     seconds: 0,
     thirds: 0,
+    fourths: 0,
   }
 }
 
