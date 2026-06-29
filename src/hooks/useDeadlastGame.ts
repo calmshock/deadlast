@@ -144,7 +144,12 @@ export function useDeadlastGame() {
   const [mounted, setMounted] = useState(false);
   const [playerCount, setPlayerCount] = useState<GameMode>(3);
   const [buyIn, setBuyIn] = useState(1);
-  const [balance, setBalance] = useState(100);
+  const [balance, setBalance] = useState(() => {
+    if (typeof window === "undefined") return 100;
+
+    const saved = window.localStorage.getItem("deadlast:balance");
+    return saved ? Number(saved) : 100;
+  });
   const [phase, setPhase] = useState<Phase>("lobby");
   const [stage, setStage] = useState<Stage>("main");
   const [timer, setTimer] = useState(ROUND_SECONDS);
@@ -783,11 +788,6 @@ export function useDeadlastGame() {
     if (savedAutoPlayDelay) {
       setAutoPlayDelay(Number(savedAutoPlayDelay));
     }
-
-    const savedBalance = window.localStorage.getItem("deadlast:balance");
-    if (savedBalance) {
-      setBalance(Number(savedBalance));
-    }
     // Entries now automatically synced from context
 
     const savedPool = window.localStorage.getItem("deadlast:draw:poolEntries");
@@ -815,10 +815,10 @@ export function useDeadlastGame() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!mounted || typeof window === "undefined") return;
 
     window.localStorage.setItem("deadlast:balance", String(balance));
-  }, [balance]);
+  }, [mounted, balance]);
 
   useEffect(() => {
     if (!entryToast) return;
@@ -1085,6 +1085,7 @@ export function useDeadlastGame() {
     exportSponsorReport,
   };
 }
+
 
 
 
