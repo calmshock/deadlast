@@ -1,4 +1,4 @@
-import { Player, Placement, ResultRow, Stage } from "@/types/game";
+import { Player, Placement, ResultRow, Stage, GameMode } from "@/types/game";
 import { resolveHeadToHead, resolveMainRound } from "./resolve";
 import { buildResults } from "@/lib/payouts";
 import { resolveInstantHeadToHead } from "./helpers";
@@ -47,7 +47,7 @@ export function runMainRound(
       return {
         type: "finished",
         placements: finalPlacements,
-        results: buildResults(players, finalPlacements, buyIn, players.length),
+        results: buildResults(players, finalPlacements, buyIn, players.length as GameMode),
       };
     }
 
@@ -97,6 +97,6 @@ export function runTieBreak(
   return {
     type: "finished",
     placements: finalPlacements,
-    results: buildResults(players, finalPlacements, buyIn, players.length),
+    results: buildResults(players, finalPlacements, buyIn, players.length as GameMode),
   };
 }
