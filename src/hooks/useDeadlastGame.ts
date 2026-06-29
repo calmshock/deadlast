@@ -355,11 +355,10 @@ export function useDeadlastGame() {
       if (earned > 0 && !awardedEntryRef.current) {
         awardedEntryRef.current = true;
 
-        // Update progress through context (single source of truth)
-        arenaProgress.addSessionLossEntry();
-        arenaProgress.addLifetimeLossEntry();
-        arenaProgress.addSessionEligibleLoss();
-        arenaProgress.addLifetimeEligibleLoss();
+        // Update progress through context (single source of truth).
+        // One atomic update increments session+lifetime loss entries AND
+        // eligible losses, mirroring the original inline progress write.
+        arenaProgress.recordEligibleManualLoss();
 
         setEntryToast({
           id: Date.now(),

@@ -1,138 +1,128 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import type { ArenaUserProgress } from "@/types/arena";
 import {
+  ARENA_PROGRESS_STORAGE_KEY,
+  ARENA_PROGRESS_UPDATED_EVENT,
   createEmptyArenaProgress,
   readArenaProgress,
   writeArenaProgress,
-  ARENA_PROGRESS_UPDATED_EVENT,
 } from "@/lib/arena/progress";
 
-type ArenaProgressContextType = {
+/**
+ * ArenaProgressContext is the single source of truth for arena entry/progress
+ * state (session + lifetime loss entries, eligible losses, ineligible auto
+ * losses, arena credits).
+ *
+ * It owns the React state and persists every change to localStorage via the
+ * existing `writeArenaProgress` helper, so reads and writes stay consistent
+ * across `/` and `/arena` without manual sync calls.
+ */
+interface ArenaProgressContextType {
   progress: ArenaUserProgress;
-  updateProgress: (updates: Partial<ArenaUserProgress>) => void;
-  addSessionLossEntry: () => void;
-  addLifetimeLossEntry: () => void;
-  addSessionEligibleLoss: () => void;
-  addLifetimeEligibleLoss: () => void;
-  addSessionIneligibleAutoLoss: () => void;
-  addLifetimeIneligibleAutoLoss: () => void;
+  /** Replace the whole progress object (used by reset/admin flows). */
+  setProgress: (next: ArenaUserProgress) => void;
+  /**
+   * Record a manual, eligible last-place finish. Increments session + lifetime
+   * loss entries AND eligible losses in a single atomic update. This is the
+   * ONLY path that adds a prize entry.
+   */
+  recordEligibleManualLoss: () => void;
+  /**
+   * Record an auto-picked last-place finish. Increments only the ineligible
+   * auto-loss counters; never adds a prize entry.
+   */
+  recordIneligibleAutoLoss: () => void;
+  /** Reset session counters only (lifetime totals preserved). */
   resetSessionProgress: () => void;
+  /** Reset everything (session + lifetime). */
   resetAllProgress: () => void;
-};
+}
 
-const ArenaProgressContext = createContext<ArenaProgressContextType | null>(null);
+const ArenaProgressContext = createContext<ArenaProgressContextType | null>(
+  null,
+);
 
 export function ArenaProgressProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [progress, setProgress] = useState<ArenaUserProgress>(() =>
-    readArenaProgress()
+  // Initialize from localStorage on the client; fall back to empty on server.
+  const [progress, setProgressState] = useState<ArenaUserProgress>(() =>
+    readArenaProgress(),
   );
 
-  // Listen for external storage updates (from other tabs/windows)
+  // Persist every change to localStorage (writeArenaProgress also dispatches
+  // the ARENA_PROGRESS_UPDATED_EVENT for any non-context listeners).
   useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "deadlast:arena:user-progress" && event.newValue) {
-        try {
-          const updated = JSON.parse(event.newValue) as ArenaUserProgress;
-          setProgress(updated);
-        } catch {
-          // ignore parse errors
-        }
+    writeArenaProgress(progress);
+  }, [progress]);
+
+  // Keep in sync if another tab/window updates the same storage key.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === ARENA_PROGRESS_STORAGE_KEY) {
+        setProgressState(readArenaProgress());
       }
     };
 
-    // Listen for custom event from same tab
-    const handleProgressUpdate = (event: Event) => {
-      if (event instanceof CustomEvent) {
-        setProgress(event.detail as ArenaUserProgress);
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener(ARENA_PROGRESS_UPDATED_EVENT, handleProgressUpdate);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener(
-        ARENA_PROGRESS_UPDATED_EVENT,
-        handleProgressUpdate
-      );
-    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  const updateProgress = (updates: Partial<ArenaUserProgress>) => {
-    const newProgress: ArenaUserProgress = {
-      ...progress,
-      ...updates,
+  const setProgress = useCallback((next: ArenaUserProgress) => {
+    setProgressState(next);
+  }, []);
+
+  const recordEligibleManualLoss = useCallback(() => {
+    setProgressState((prev) => ({
+      ...prev,
+      sessionLossEntries: prev.sessionLossEntries + 1,
+      lifetimeLossEntries: prev.lifetimeLossEntries + 1,
+      sessionEligibleLosses: prev.sessionEligibleLosses + 1,
+      lifetimeEligibleLosses: prev.lifetimeEligibleLosses + 1,
       lastUpdatedAt: Date.now(),
-    };
-    setProgress(newProgress);
-    writeArenaProgress(newProgress);
-  };
+    }));
+  }, []);
 
-  const addSessionLossEntry = () => {
-    updateProgress({
-      sessionLossEntries: progress.sessionLossEntries + 1,
-    });
-  };
+  const recordIneligibleAutoLoss = useCallback(() => {
+    setProgressState((prev) => ({
+      ...prev,
+      sessionIneligibleAutoLosses: prev.sessionIneligibleAutoLosses + 1,
+      lifetimeIneligibleAutoLosses: prev.lifetimeIneligibleAutoLosses + 1,
+      lastUpdatedAt: Date.now(),
+    }));
+  }, []);
 
-  const addLifetimeLossEntry = () => {
-    updateProgress({
-      lifetimeLossEntries: progress.lifetimeLossEntries + 1,
-    });
-  };
-
-  const addSessionEligibleLoss = () => {
-    updateProgress({
-      sessionEligibleLosses: progress.sessionEligibleLosses + 1,
-    });
-  };
-
-  const addLifetimeEligibleLoss = () => {
-    updateProgress({
-      lifetimeEligibleLosses: progress.lifetimeEligibleLosses + 1,
-    });
-  };
-
-  const addSessionIneligibleAutoLoss = () => {
-    updateProgress({
-      sessionIneligibleAutoLosses: progress.sessionIneligibleAutoLosses + 1,
-    });
-  };
-
-  const addLifetimeIneligibleAutoLoss = () => {
-    updateProgress({
-      lifetimeIneligibleAutoLosses: progress.lifetimeIneligibleAutoLosses + 1,
-    });
-  };
-
-  const resetSessionProgress = () => {
-    updateProgress({
+  const resetSessionProgress = useCallback(() => {
+    setProgressState((prev) => ({
+      ...prev,
       sessionLossEntries: 0,
       sessionEligibleLosses: 0,
       sessionIneligibleAutoLosses: 0,
-    });
-  };
+      lastUpdatedAt: Date.now(),
+    }));
+  }, []);
 
-  const resetAllProgress = () => {
-    setProgress(createEmptyArenaProgress());
-    writeArenaProgress(createEmptyArenaProgress());
-  };
+  const resetAllProgress = useCallback(() => {
+    setProgressState(createEmptyArenaProgress());
+  }, []);
 
   const value: ArenaProgressContextType = {
     progress,
-    updateProgress,
-    addSessionLossEntry,
-    addLifetimeLossEntry,
-    addSessionEligibleLoss,
-    addLifetimeEligibleLoss,
-    addSessionIneligibleAutoLoss,
-    addLifetimeIneligibleAutoLoss,
+    setProgress,
+    recordEligibleManualLoss,
+    recordIneligibleAutoLoss,
     resetSessionProgress,
     resetAllProgress,
   };
@@ -144,12 +134,25 @@ export function ArenaProgressProvider({
   );
 }
 
-export function useArenaProgress() {
+export function useArenaProgress(): ArenaProgressContextType {
   const context = useContext(ArenaProgressContext);
+
+  // During SSR/prerender (or if used outside the provider) the context is
+  // null. Return a no-op shape so static prerendering of the not-found and
+  // error pages does not crash. On the client inside the provider, the real
+  // value is always returned.
   if (!context) {
-    throw new Error(
-      "useArenaProgress must be used within ArenaProgressProvider"
-    );
+    return {
+      progress: createEmptyArenaProgress(),
+      setProgress: () => {},
+      recordEligibleManualLoss: () => {},
+      recordIneligibleAutoLoss: () => {},
+      resetSessionProgress: () => {},
+      resetAllProgress: () => {},
+    };
   }
+
   return context;
 }
+
+export { ARENA_PROGRESS_UPDATED_EVENT };
