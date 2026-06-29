@@ -108,6 +108,12 @@ export default function HeroPanel({
         {ctaHref ? (
           <Link
             href={ctaHref}
+            onClick={() => {
+              window.localStorage.setItem("deadlast:lobby:playerCount", String(playerCount));
+              window.localStorage.setItem("deadlast:lobby:buyIn", String(buyIn));
+              window.localStorage.setItem("deadlast:lobby:autoPlayEnabled", String(autoPlayEnabled));
+              window.localStorage.setItem("deadlast:lobby:autoPlayDelay", String(autoPlayDelay));
+            }}
             className="rounded-2xl bg-red-500 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-white shadow-[0_0_30px_rgba(239,68,68,0.35)] transition hover:scale-[1.02] hover:bg-red-400"
           >
             {ctaLabel ?? "Enter Arena"}
@@ -191,4 +197,5 @@ export default function HeroPanel({
     </div>
   )
 }
+
 

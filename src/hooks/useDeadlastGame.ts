@@ -766,6 +766,28 @@ export function useDeadlastGame() {
   useEffect(() => {
     setMounted(true);
 
+    const savedPlayerCount = window.localStorage.getItem("deadlast:lobby:playerCount");
+    const savedBuyIn = window.localStorage.getItem("deadlast:lobby:buyIn");
+    const savedAutoPlayEnabled = window.localStorage.getItem("deadlast:lobby:autoPlayEnabled");
+    const savedAutoPlayDelay = window.localStorage.getItem("deadlast:lobby:autoPlayDelay");
+
+    if (savedPlayerCount === "2" || savedPlayerCount === "3" || savedPlayerCount === "4") {
+      setPlayerCount(Number(savedPlayerCount) as GameMode);
+      setPlayers(createPlayers(Number(savedPlayerCount) as GameMode));
+    }
+
+    if (savedBuyIn) {
+      setBuyIn(Number(savedBuyIn));
+    }
+
+    if (savedAutoPlayEnabled) {
+      setAutoPlayEnabled(savedAutoPlayEnabled === "true");
+    }
+
+    if (savedAutoPlayDelay) {
+      setAutoPlayDelay(Number(savedAutoPlayDelay));
+    }
+
     const savedBalance = window.localStorage.getItem("deadlast:balance");
     if (savedBalance) {
       setBalance(Number(savedBalance));
@@ -1076,6 +1098,7 @@ export function useDeadlastGame() {
     exportSponsorReport,
   };
 }
+
 
 
 
