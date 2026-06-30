@@ -1,0 +1,262 @@
+/**
+ * DeadLast Arena Scene — styling layer (PRESENTATION ONLY)
+ *
+ * Color Direction (Art Bible):
+ *   black / deep navy base · electric cyan · hot magenta · neon green ·
+ *   gold highlights · red for DeadLast danger moments.
+ *
+ * Motion follows the Animation Bible: idle is always alive, UI beats stay
+ * snappy, and only `transform`/`opacity`/`filter` are animated for GPU smoothness.
+ * All non-essential motion is gated behind prefers-reduced-motion.
+ */
+
+.dl-arena {
+  --dl-bg: #05060d;
+  --dl-navy: #0a1124;
+  --dl-cyan: #2ee6ff;
+  --dl-magenta: #ff3ea5;
+  --dl-green: #49f08a;
+  --dl-gold: #ffc24b;
+  --dl-danger: #ff3b3b;
+  --dl-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dl-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--dl-bg);
+  font-feature-settings: "ss01";
+}
+
+/* Background plate + readability vignette */
+.dl-arena__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 38%;
+  transform: scale(1.04);
+  will-change: transform, filter;
+  transition:
+    filter 420ms var(--dl-ease-in-out),
+    transform 600ms var(--dl-ease-in-out);
+}
+.dl-arena__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(5, 6, 13, 0) 30%, rgba(5, 6, 13, 0.55) 78%),
+    linear-gradient(to bottom, rgba(5, 6, 13, 0.35), rgba(5, 6, 13, 0.05) 40%, rgba(5, 6, 13, 0.85));
+  pointer-events: none;
+}
+
+/* "Lights dim" signature reveal beat */
+.dl-arena[data-beat="revealing"] .dl-arena__bg {
+  filter: brightness(0.45) saturate(1.15);
+}
+.dl-arena[data-beat="revealing"] .dl-arena__flash {
+  animation: dl-impact 620ms var(--dl-ease-out);
+}
+.dl-arena__flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 55%);
+}
+
+/* Center table */
+.dl-arena__table {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 58%;
+  max-width: 620px;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.6));
+}
+.dl-arena__table-glow {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 62%;
+  max-width: 680px;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(46, 230, 255, 0.18), rgba(255, 62, 165, 0.05) 55%, transparent 70%);
+  filter: blur(8px);
+  pointer-events: none;
+  animation: dl-breathe 5.5s ease-in-out infinite;
+}
+
+/* Seat station */
+.dl-seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Idle float — always alive, staggered per seat via inline delay */
+.dl-seat__float {
+  animation: dl-idle-float 4.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.dl-seat__pedestal {
+  position: relative;
+  width: 132px;
+  max-width: 30vw;
+  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.55));
+}
+.dl-seat__pedestal-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dl-seat__hand {
+  position: absolute;
+  left: 50%;
+  top: -6%;
+  width: 58%;
+  transform: translateX(-50%);
+  color: #fff;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
+}
+.dl-seat__ring {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  width: 78%;
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.75;
+  background: radial-gradient(circle, rgba(46, 230, 255, 0.35), transparent 62%);
+}
+.dl-seat[data-role="you"] .dl-seat__ring {
+  background: radial-gradient(circle, rgba(255, 194, 75, 0.4), transparent 62%);
+}
+
+/* Result tones */
+.dl-seat[data-outcome="win"] .dl-seat__ring {
+  background: radial-gradient(circle, rgba(255, 194, 75, 0.6), transparent 64%);
+}
+.dl-seat[data-outcome="dead"] .dl-seat__ring {
+  background: radial-gradient(circle, rgba(255, 59, 59, 0.55), transparent 64%);
+}
+
+/* Nameplate */
+.dl-seat__plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 0.6rem;
+  background: rgba(5, 8, 18, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+.dl-seat__name {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+.dl-seat__balance {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dl-green);
+}
+.dl-seat__status {
+  margin-top: 0.15rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Lock-in lift */
+.dl-seat[data-locked="true"] .dl-seat__float {
+  transform: translateY(-8px);
+}
+
+/* Center display (round / timer / prompt) */
+.dl-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+.dl-center__round {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+.dl-center__timer {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--dl-gold);
+  text-shadow: 0 0 24px rgba(255, 194, 75, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.dl-center__timer[data-low="true"] {
+  color: var(--dl-danger);
+  text-shadow: 0 0 26px rgba(255, 59, 59, 0.6);
+  animation: dl-pulse 0.9s ease-in-out infinite;
+}
+.dl-center__prompt {
+  margin-top: 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+@keyframes dl-idle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes dl-breathe {
+  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.04); }
+}
+@keyframes dl-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+@keyframes dl-impact {
+  0% { opacity: 0; }
+  18% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-seat__float,
+  .dl-arena__table-glow,
+  .dl-center__timer[data-low="true"],
+  .dl-arena__flash {
+    animation: none !important;
+  }
+  .dl-arena__bg {
+    transition: none;
+  }
+}
