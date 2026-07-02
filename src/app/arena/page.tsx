@@ -8,6 +8,7 @@ import ArenaStage from "@/components/deadlast/ArenaStage";
 import AnimatedArena from "@/components/deadlast/animated-arena/AnimatedArena";
 import { buildArenaPlayers } from "@/components/deadlast/animated-arena/arenaViewModel";
 import { beatFromPhase } from "@/components/deadlast/animated-arena/types";
+import ArenaMoveControls from "@/components/deadlast/animated-arena/ArenaMoveControls";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 import type { Move } from "@/types/game";
 
@@ -46,6 +47,11 @@ export default function ArenaPage() {
             seconds={game.timer}
             currentPlayerId={game.players.find((player) => player.isUser)?.id}
           />
+          <ArenaMoveControls
+            phase={game.phase}
+            onPick={handlePick}
+          />
+
           <ArenaStage
             players={game.players}
             activeIds={game.activeIds}
@@ -75,5 +81,6 @@ export default function ArenaPage() {
     </main>
   );
 }
+
 
 
