@@ -1,5 +1,6 @@
-"use client";
+ï»¿"use client";
 
+import { useEffect, useState } from "react";
 import AnimatedArena from "./AnimatedArena";
 import { buildArenaPlayers } from "./arenaViewModel";
 import { beatFromPhase } from "./types";
@@ -7,12 +8,27 @@ import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 
 export default function ArenaLivePreview() {
   const game = useDeadlastGame();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <section className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4 text-cyan-200">
+        Loading live arena preview...
+      </section>
+    );
+  }
+
+  const userPlayer = game.players.find((player) => player.isUser);
 
   return (
     <section className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4">
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300">
-          Sprint 002 Live Preview — mirrors real game state
+          Sprint 002 Live Preview - mirrors real game state
         </span>
       </div>
 
@@ -25,10 +41,8 @@ export default function ArenaLivePreview() {
             balance: game.balance,
           })}
           beat={beatFromPhase(game.phase)}
-          round={undefined}
-          totalRounds={undefined}
           seconds={game.timer}
-          currentPlayerId={game.players.find((player) => player.isUser)?.id}
+          currentPlayerId={userPlayer?.id}
         />
       </div>
     </section>

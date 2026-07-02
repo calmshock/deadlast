@@ -1,10 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import Header from "@/components/deadlast/Header";
 import ResultModal from "@/components/deadlast/ResultModal";
 import EntryToast from "@/components/deadlast/EntryToast";
 import ArenaStage from "@/components/deadlast/ArenaStage";
+import AnimatedArena from "@/components/deadlast/animated-arena/AnimatedArena";
+import { buildArenaPlayers } from "@/components/deadlast/animated-arena/arenaViewModel";
+import { beatFromPhase } from "@/components/deadlast/animated-arena/types";
 import { useDeadlastGame } from "@/hooks/useDeadlastGame";
 import type { Move } from "@/types/game";
 
@@ -31,7 +34,18 @@ export default function ArenaPage() {
           entriesDelta={game.entriesEarnedThisMatch}
         />
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-6">
+          <AnimatedArena
+            players={buildArenaPlayers({
+              players: game.players,
+              activeIds: game.activeIds,
+              placements: game.placements,
+              balance: game.balance,
+            })}
+            beat={beatFromPhase(game.phase)}
+            seconds={game.timer}
+            currentPlayerId={game.players.find((player) => player.isUser)?.id}
+          />
           <ArenaStage
             players={game.players}
             activeIds={game.activeIds}
@@ -61,4 +75,5 @@ export default function ArenaPage() {
     </main>
   );
 }
+
 
